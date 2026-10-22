@@ -515,6 +515,7 @@
     }
 
     /* Progress Display */
+    /* Progress & Central Searching Process */
     .progress-box {
       display: none;
       background: var(--surface-subtle);
@@ -522,6 +523,135 @@
       border-radius: var(--radius-md);
       padding: 14px 18px;
       margin-bottom: 18px;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Central Searching State (When active in the Discovered section) */
+    .progress-box.searching-center {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 38px 28px 32px 28px;
+      margin: 16px auto 24px auto;
+      max-width: 600px;
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+      animation: centerSearchReveal 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes centerSearchReveal {
+      0% { opacity: 0; transform: scale(0.97) translateY(8px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .searching-hero-icon {
+      display: none;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #000000;
+      color: #ffffff;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px auto;
+      position: relative;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    }
+
+    .progress-box.searching-center .searching-hero-icon {
+      display: inline-flex;
+    }
+
+    .searching-hero-icon .radar-ring {
+      position: absolute;
+      inset: -5px;
+      border: 1.5px solid rgba(0, 0, 0, 0.2);
+      border-radius: 50%;
+      animation: heroRadarPing 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    .searching-hero-icon .radar-ring-2 {
+      position: absolute;
+      inset: -12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      animation: heroRadarPing 2.2s cubic-bezier(0, 0, 0.2, 1) infinite 0.7s;
+    }
+
+    @keyframes heroRadarPing {
+      0% { transform: scale(0.9); opacity: 0.9; }
+      80%, 100% { transform: scale(1.45); opacity: 0; }
+    }
+
+    .searching-center-title {
+      display: none;
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .searching-center-subtitle {
+      display: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .progress-box.searching-center .searching-center-title {
+      display: block;
+    }
+
+    .progress-box.searching-center .searching-center-subtitle {
+      display: block;
+    }
+
+    .progress-box.searching-center .progress-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+    }
+
+    .progress-box.searching-center .progress-track {
+      height: 7px;
+      margin-bottom: 16px;
+    }
+
+    .progress-box.searching-center .steps-flow {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .progress-box.searching-center .live-ticker {
+      margin-top: 18px;
+      justify-content: center;
+      padding: 8px 18px;
+    }
+
+    /* Completed Mode (Sleek Banner Above Table) */
+    .progress-box.completed-mode {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      margin: 0 0 16px 0;
+      max-width: 100%;
+      box-shadow: none;
+    }
+
+    .progress-box.completed-mode .searching-hero-icon,
+    .progress-box.completed-mode .searching-center-title,
+    .progress-box.completed-mode .searching-center-subtitle {
+      display: none;
+    }
+
+    .progress-box.completed-mode .live-ticker {
+      justify-content: flex-start;
+      margin-top: 10px;
     }
 
     .progress-header {
@@ -1095,6 +1225,16 @@
 
         <!-- Progress Tracker & 4-Step Searching Indicator -->
         <div class="progress-box" id="progressWrap">
+          <!-- Hero Radar Icon (Centered Mode) -->
+          <div class="searching-hero-icon" id="searchingHeroIcon">
+            <div class="radar-ring"></div>
+            <div class="radar-ring-2"></div>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+
+          <h3 class="searching-center-title" id="searchingCenterTitle">Scanning Target…</h3>
+          <p class="searching-center-subtitle" id="searchingCenterSubtitle">Resolving official root domain & analyzing across 4 discovery layers</p>
+
           <div class="progress-header">
             <span id="progressStatus">Scanning targets…</span>
             <span id="progressNumbers">0 / 0</span>
@@ -1225,6 +1365,9 @@
     const stepsFlow = document.getElementById('stepsFlow');
     const liveTicker = document.getElementById('liveTicker');
     const tickerText = document.getElementById('tickerText');
+    const searchingHeroIcon = document.getElementById('searchingHeroIcon');
+    const searchingCenterTitle = document.getElementById('searchingCenterTitle');
+    const searchingCenterSubtitle = document.getElementById('searchingCenterSubtitle');
 
     // Tab Switching
     tabInstantBtn.addEventListener('click', () => {
@@ -1558,6 +1701,33 @@
       if (tickerInterval) clearInterval(tickerInterval);
       if (stepTimer) clearInterval(stepTimer);
 
+      // 1. Immediately remove older results, toolbar, and export buttons
+      tableWrap.style.display = 'none';
+      tableToolbar.style.display = 'none';
+      resultsTbody.innerHTML = '';
+      csvExportBtn.hidden = true;
+      xlsxExportBtn.hidden = true;
+
+      // 2. Immediately remove the idle empty state and search icon
+      emptyState.style.display = 'none';
+
+      // 3. Reset top counters to active searching status
+      statTotal.textContent = '…';
+      statFound.textContent = '0';
+      statRate.textContent = '0%';
+      statJs.textContent = '0';
+
+      // 4. Move searching process directly into the center of the Discovered section
+      progressWrap.className = 'progress-box searching-center';
+      progressWrap.style.display = 'block';
+
+      if (searchingCenterTitle) {
+        searchingCenterTitle.textContent = targetLabel ? `Scanning "${targetLabel}"` : 'Scanning Targets…';
+      }
+      if (searchingCenterSubtitle) {
+        searchingCenterSubtitle.textContent = 'Resolving official root domain & executing 4-layer contact intelligence scan';
+      }
+
       searchStartTime = Date.now();
       setStepState(1);
 
@@ -1634,7 +1804,6 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = `<span>Searching…</span>`;
         summaryText.textContent = `Scanning "${query}"…`;
-        progressWrap.style.display = 'block';
         progressBar.style.width = '45%';
         progressStatus.textContent = 'Resolving and analyzing pages…';
         progressNumbers.textContent = '1 / 1';
@@ -1659,6 +1828,8 @@
           submitBtn.disabled = false;
           submitBtn.innerHTML = `<span>Find Contacts</span>`;
           progressWrap.style.display = 'none';
+          progressWrap.className = 'progress-box';
+          emptyState.style.display = 'block';
         }
         return;
       }
@@ -1675,7 +1846,6 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = `<span>Processing Batch…</span>`;
       summaryText.textContent = 'Queuing targets and scanning…';
-      progressWrap.style.display = 'block';
       progressBar.style.width = '0%';
       progressStatus.textContent = 'Preparing scan queue…';
       progressNumbers.textContent = '0 / 0';
@@ -1701,6 +1871,8 @@
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<span>Find Contacts</span>`;
         progressWrap.style.display = 'none';
+        progressWrap.className = 'progress-box';
+        emptyState.style.display = 'block';
       }
     });
 
@@ -1722,25 +1894,32 @@
         allResults = job.results || [];
         updateStats(allResults);
 
-        if (allResults.length > 0) {
-          emptyState.style.display = 'none';
-          tableWrap.style.display = 'block';
-          tableToolbar.style.display = 'flex';
-          renderTableRows(allResults);
-
-          csvExportBtn.href = `/api/jobs/${jobId}/download?format=csv`;
-          csvExportBtn.hidden = false;
-          xlsxExportBtn.href = `/api/jobs/${jobId}/download?format=xlsx`;
-          xlsxExportBtn.hidden = false;
-        }
-
         if (job.status === 'completed' || job.status === 'failed') {
           if (pollInterval) clearInterval(pollInterval);
           submitBtn.disabled = false;
           submitBtn.innerHTML = `<span>Find Contacts</span>`;
           stopSearchingAnimation(job.status === 'completed', allResults);
-          if (job.status === 'failed') {
+
+          if (job.status === 'completed') {
+            // Transition from centered searching process to completed results mode
+            progressWrap.className = 'progress-box completed-mode';
+            emptyState.style.display = 'none';
+
+            if (allResults.length > 0) {
+              tableToolbar.style.display = 'flex';
+              tableWrap.style.display = 'block';
+              renderTableRows(allResults);
+
+              csvExportBtn.href = `/api/jobs/${jobId}/download?format=csv`;
+              csvExportBtn.hidden = false;
+              xlsxExportBtn.href = `/api/jobs/${jobId}/download?format=xlsx`;
+              xlsxExportBtn.hidden = false;
+            }
+          } else {
             showAlert(job.message || 'Scan job failed.');
+            progressWrap.className = 'progress-box';
+            progressWrap.style.display = 'none';
+            emptyState.style.display = 'block';
           }
         }
       } catch (err) {
@@ -1749,6 +1928,9 @@
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<span>Find Contacts</span>`;
         showAlert(err.message || 'Error checking scan progress.');
+        progressWrap.className = 'progress-box';
+        progressWrap.style.display = 'none';
+        emptyState.style.display = 'block';
       }
     }
 
@@ -1760,6 +1942,14 @@
       showAlert('');
       stopSearchingAnimation(false);
       progressWrap.style.display = 'none';
+      progressWrap.className = 'progress-box';
+      tableWrap.style.display = 'none';
+      tableToolbar.style.display = 'none';
+      resultsTbody.innerHTML = '';
+      allResults = [];
+      updateStats([]);
+      emptyState.style.display = 'block';
+      summaryText.textContent = 'Ready to discover business contacts. Search above to begin.';
       instantQuery.focus();
     });
   </script>
