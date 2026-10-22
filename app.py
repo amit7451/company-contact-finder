@@ -277,15 +277,50 @@ def _parse_sheet(data: bytes, filename: str) -> list[dict[str, str]]:
     return output
 
 
+def probe_direct_domain(company_name: str) -> str | None:
+    """Fast direct domain probing for brand names before resorting to search engines."""
+    cleaned = re.sub(r"(?i)\b(inc|llc|ltd|limited|pvt|private|technologies|solutions|corp|corporation|co)\b", "", company_name)
+    slug = re.sub(r"[^a-z0-9]", "", cleaned.lower())
+    if len(slug) < 3:
+        return None
+
+    candidates = [
+        f"https://{slug}.com",
+        f"https://www.{slug}.com",
+        f"https://{slug}.in",
+        f"https://{slug}.co",
+        f"https://{slug}.io",
+    ]
+    for url in candidates:
+        try:
+            import requests
+            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=3.0, allow_redirects=True)
+            if resp.status_code == 200 and resp.url:
+                final = resp.url.rstrip("/")
+                # Check that it didn't redirect to a generic parking page
+                host = (urlparse(final).hostname or "").lower()
+                if slug in host and not any(p in host for p in ("sedo", "godaddy", "domainmarket", "dan.com", "namecheap")):
+                    logger.info("Direct domain probe hit for %s -> %s", company_name, final)
+                    return final
+        except Exception:
+            continue
+    return None
+
+
 def _search_company_website(company: str) -> tuple[str | None, str]:
-    """Robust company-to-website resolver via Brave Search API or DuckDuckGo with domain scoring."""
+    """Robust company-to-website resolver via direct domain probing, Brave Search API, or DuckDuckGo."""
     company = company.strip()
     if not company:
         return None, "Empty company name provided."
 
+    # Step 1: Direct Domain Probe (e.g. "doordripp" -> https://doordripp.com)
+    probed = probe_direct_domain(company)
+    if probed:
+        return probed, "Website resolved via direct brand domain verification."
+
+    # Step 2: Search Engine Discovery
     candidates: list[tuple[str, str, str]] = []
 
-    # 1. Brave Search API if configured
     brave_key = os.getenv("BRAVE_SEARCH_API_KEY", "").strip()
     if brave_key:
         try:
@@ -302,7 +337,6 @@ def _search_company_website(company: str) -> tuple[str | None, str]:
         except Exception as e:
             logger.debug("Brave search error: %s", e)
 
-    # 2. DuckDuckGo Search Fallback
     if not candidates:
         try:
             from ddgs import DDGS
@@ -341,10 +375,9 @@ def _search_company_website(company: str) -> tuple[str | None, str]:
         haystack = f"{host} {title} {snippet}".lower()
         score = 0
 
-        # Exact token matches in domain name carry highest weight
         for token in company_tokens:
             if token in host:
-                score += 4
+                score += 5
             elif token in haystack:
                 score += 1
 
@@ -352,6 +385,12 @@ def _search_company_website(company: str) -> tuple[str | None, str]:
             score += 2
         if any(term in host for term in ("directory", "review", "jobs", "careers", "wiki", "forum")):
             score -= 5
+
+        # If search returned a subpath like /login, /delivery, /app, strip to root origin!
+        parsed = urlparse(url)
+        path = parsed.path.rstrip("/").lower()
+        if path in ("/login", "/signin", "/sign-in", "/delivery", "/app", "/portal", "/cart", "/checkout") or any(path.startswith(p) for p in ("/login", "/signin", "/app/")):
+            url = f"{parsed.scheme}://{parsed.netloc}"
 
         if score > best_score:
             best_score = score
@@ -363,21 +402,32 @@ def _search_company_website(company: str) -> tuple[str | None, str]:
 
 
 def _process_one(item: dict[str, str], enable_js_fallback: bool = True) -> dict[str, Any]:
-    """Process a single target: resolves website or company name and extracts contacts."""
+    """Process a single target: prioritizes direct URL from CSV, uses direct domain probing and multi-layered discovery."""
     company = (item.get("company") or "").strip()
     website_input = (item.get("website") or "").strip()
     search_note = ""
 
-    # If company was typed as a URL or vice-versa
-    if not website_input and _looks_like_url(company):
+    # RULE 1: If both are mentioned in CSV/input, ALWAYS PREFER the direct URL!
+    if website_input:
+        # Check if columns were swapped
+        if not _looks_like_url(website_input) and _looks_like_url(company):
+            website_input, company = company, website_input
+    elif company and _looks_like_url(company):
         website_input = company
         company = ""
 
-    # If website missing, search via company name
+    # RULE 2: If website is still missing, search or probe via company name
     if not website_input and company:
         website_input, search_note = _search_company_website(company)
 
+    # Clean the URL (strips dead /login or /delivery subpaths to root origin)
     normalized = normalize_input_url(website_input or "")
+    if normalized:
+        parsed = urlparse(normalized)
+        path = parsed.path.rstrip("/").lower()
+        if path in ("/login", "/signin", "/sign-in", "/delivery", "/app", "/portal", "/cart", "/checkout") or any(path.startswith(p) for p in ("/login", "/signin", "/app/")):
+            normalized = f"{parsed.scheme}://{parsed.netloc}"
+
     if not normalized:
         return {
             "company": company or website_input or "Unknown",
@@ -393,8 +443,12 @@ def _process_one(item: dict[str, str], enable_js_fallback: bool = True) -> dict[
             "js_rendered": False,
         }
 
-    # Perform scraping (with JS fallback if contacts not found statically)
-    result = scrape_website(normalized, enable_js_fallback=enable_js_fallback)
+    # Perform multi-layered scraping (Static -> Playwright JS -> External Search)
+    result = scrape_website(
+        normalized,
+        enable_js_fallback=enable_js_fallback,
+        company_name=company or _clean_brand_from_title(normalized),
+    )
 
     # If company name was missing, derive it from title or domain
     if not company:

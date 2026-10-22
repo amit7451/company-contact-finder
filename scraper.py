@@ -1,4 +1,4 @@
-"""Public business contact discovery with bounded crawling and headless JS-rendered fallback."""
+"""Public business contact discovery with multi-layered crawling, Playwright rendering, and external search fallbacks."""
 from __future__ import annotations
 
 import html
@@ -29,7 +29,6 @@ MIN_DOMAIN_DELAY = 0.5
 EMAIL_RE = re.compile(
     r"(?i)\b[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+\b"
 )
-# Matches obfuscated emails like "contact [at] example [dot] com" or "support(at)domain.com"
 OBFUSCATED_AT_RE = re.compile(r"(?i)\s*(?:\[\s*at\s*\]|\(\s*at\s*\)|\{\s*at\s*\}|\s+at\s+)\s*")
 OBFUSCATED_DOT_RE = re.compile(r"(?i)\s*(?:\[\s*dot\s*\]|\(\s*dot\s*\)|\{\s*dot\s*\}|\s+dot\s+)\s*")
 
@@ -56,7 +55,8 @@ CONTACT_WORDS = (
 
 SKIP_PATH_WORDS = (
     "login", "signin", "sign-in", "register", "cart", "checkout", "account",
-    "search", "tag/", "category/", "author/", "wp-admin", "wp-content/plugins"
+    "search", "tag/", "category/", "author/", "wp-admin", "wp-content/plugins",
+    "wp-login", "portal", "auth"
 )
 
 SOCIAL_DOMAINS = {
@@ -72,9 +72,34 @@ _robots_cache: dict[str, RobotFileParser | None | bool] = {}
 _robots_lock = threading.Lock()
 _domain_last_request: dict[str, float] = {}
 _domain_delay_lock = threading.Lock()
-
-# Playwright browser lock to prevent overwhelming memory on local machines
 _playwright_lock = threading.Lock()
+
+
+def get_root_url(url: str) -> str:
+    """Return the root origin of a URL (e.g. https://example.com/login -> https://example.com)."""
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.netloc:
+        return url
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def clean_target_url(raw_url: str) -> str:
+    """Normalize input URL and strip dead/portal subpaths like /login, /delivery to root."""
+    url = (raw_url or "").strip()
+    if not url:
+        return ""
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    parsed = urlparse(url)
+    if not parsed.hostname:
+        return ""
+    
+    # Critical fix: If the path is a login/portal/delivery page, strip to root homepage
+    path = parsed.path.rstrip("/").lower()
+    skip_exact = {"/login", "/signin", "/sign-in", "/app", "/portal", "/delivery", "/cart", "/checkout", "/wp-login.php"}
+    if path in skip_exact or any(path.startswith(p) for p in ("/login", "/signin", "/app/")):
+        return f"{parsed.scheme}://{parsed.netloc}"
+    return url.rstrip("/")
 
 
 def decode_cloudflare_email(cf_hex: str) -> str:
@@ -143,7 +168,7 @@ def _robots_for(origin_url: str) -> RobotFileParser | None | bool:
         else:
             result = False
     except requests.RequestException:
-        result = None  # Polite fallback if robots.txt unreachable
+        result = None
     with _robots_lock:
         _robots_cache[host] = result
     return result
@@ -173,7 +198,7 @@ def _polite_delay(url: str) -> None:
 
 
 def _valid_email(email: str) -> bool:
-    email = email.strip().strip(".,;:!?)>]}\"'\t\n\r").lower()
+    email = email.strip().strip(".,;:!?)>]}\"'{}[] \t\n\r").lower()
     if len(email) > 254 or "@" not in email or ".." in email:
         return False
     user, _, domain = email.partition("@")
@@ -183,7 +208,6 @@ def _valid_email(email: str) -> bool:
         return False
     if domain.endswith(SKIP_EXTENSIONS):
         return False
-    # Filter numeric or single-letter bogus domains
     tld = domain.rsplit(".", 1)[-1]
     if len(tld) < 2 or not tld.isalpha():
         return False
@@ -195,20 +219,49 @@ def _clean_phone(raw: str) -> str | None:
     digits = re.sub(r"\D", "", raw)
     if not (8 <= len(digits) <= 15):
         return None
-    if len(set(digits)) <= 2:  # Avoid 0000000000 or 11111111
+    if len(set(digits)) <= 2:
         return None
     # Reject range/schedule patterns like "0-2 2-4 4-6" or excessive hyphenation
     if re.search(r"\d+-\d+\s+\d+-\d+", raw) or raw.count("-") >= 4:
         return None
-    # Reject date ranges like 2020-2024 or 2018-2026
+    # Reject date ranges like 2020-2024
     if re.search(r"20[0-2]\d[-–—]20[0-3]\d", raw):
         return None
     segments = re.findall(r"\d+", raw)
     if len(segments) >= 4 and all(len(s) <= 2 for s in segments):
         return None
-    # Standardize spaces and symbols
     cleaned = re.sub(r"\s+", " ", raw).strip(" .-()")
     return cleaned
+
+
+def canonicalize_phones(phones: set[str] | list[str]) -> list[str]:
+    """Group and canonicalize phone numbers, keeping the cleanest and best formatted version."""
+    cleaned: list[tuple[int, str, str]] = []
+    for p in phones:
+        d = re.sub(r"\D", "", p)
+        if 8 <= len(d) <= 15:
+            cleaned.append((len(d), p, d))
+
+    cleaned.sort(key=lambda x: (x[0], -len(x[1])))
+    final_phones: list[str] = []
+    seen_digits: set[str] = set()
+
+    for _, p, d in cleaned:
+        # Ignore numbers that are an existing number with trailing concatenated digits (e.g. +91 9286819662 7)
+        if any(d.startswith(existing) and len(d) <= len(existing) + 2 for existing in seen_digits):
+            continue
+        if d in seen_digits:
+            continue
+        # If 10-digit number exists and 12-digit +91 version arrives, upgrade to the international formatted one
+        if len(d) == 12 and d.startswith("91") and d[2:] in seen_digits:
+            seen_digits.add(d)
+            final_phones = [x for x in final_phones if re.sub(r"\D", "", x) != d[2:]]
+            final_phones.append(p)
+            continue
+        seen_digits.add(d)
+        final_phones.append(p)
+
+    return sorted(final_phones)
 
 
 def _extract_phone_candidates(text: str) -> list[str]:
@@ -246,7 +299,8 @@ def _candidate_contact_paths(root_url: str) -> list[str]:
     paths = [
         "/contact", "/contact-us", "/contactus", "/about", "/about-us",
         "/support", "/help", "/customer-care", "/pages/contact-us",
-        "/reach-us", "/our-team", "/team", "/impressum", "/locations"
+        "/reach-us", "/our-team", "/team", "/impressum", "/locations",
+        "/.well-known/security.txt", "/security.txt"
     ]
     return [origin + p for p in paths]
 
@@ -269,7 +323,6 @@ def _extract_social_links(soup: BeautifulSoup | None, text_content: str = "") ->
             match = pattern.search(link)
             if match:
                 clean_url = match.group(0).rstrip("/")
-                # Filter out generic share links or base domain links
                 path = urlparse(clean_url).path.strip("/")
                 if not path or path in ("intent", "share", "sharer", "sharer.php", "home", "search", "login"):
                     continue
@@ -315,15 +368,15 @@ def _extract_contacts_from_html(html_str: str, base_url: str) -> tuple[set[str],
         if lower_href.startswith("mailto:"):
             raw_email = href[7:].split("?", 1)[0].strip()
             for found in EMAIL_RE.findall(raw_email):
-                if _valid_email(found):
-                    emails.add(found.lower())
+                clean_e = found.strip(".,;:!?)>]}\"'{}[] \t\n\r")
+                if _valid_email(clean_e):
+                    emails.add(clean_e.lower())
         elif lower_href.startswith("tel:"):
             raw_phone = href[4:].split("?", 1)[0].strip()
             cleaned = _clean_phone(raw_phone)
             if cleaned:
                 phones.add(cleaned)
         elif "wa.me/" in lower_href or "api.whatsapp.com/send" in lower_href:
-            # WhatsApp business phone
             if "wa.me/" in lower_href:
                 part = href.split("wa.me/", 1)[-1].split("?", 1)[0].strip()
             else:
@@ -345,17 +398,16 @@ def _extract_contacts_from_html(html_str: str, base_url: str) -> tuple[set[str],
     obf_text = OBFUSCATED_AT_RE.sub("@", page_text)
     obf_text = OBFUSCATED_DOT_RE.sub(".", obf_text)
     for email in EMAIL_RE.findall(obf_text):
-        if _valid_email(email):
-            emails.add(email.lower())
+        clean_e = email.strip(".,;:!?)>]}\"'{}[] \t\n\r")
+        if _valid_email(clean_e):
+            emails.add(clean_e.lower())
 
-    # Regular Visible Text Email check
     for email in EMAIL_RE.findall(page_text):
-        if _valid_email(email):
-            emails.add(email.lower())
+        clean_e = email.strip(".,;:!?)>]}\"'{}[] \t\n\r")
+        if _valid_email(clean_e):
+            emails.add(clean_e.lower())
 
-    # Phone candidates from text
     phones.update(_extract_phone_candidates(page_text))
-
     return emails, phones, socials, title
 
 
@@ -409,6 +461,50 @@ def _download_html(url: str) -> tuple[str | None, str | None, str | None]:
     return None, current_url, "Too many redirects"
 
 
+def search_external_contacts(company_name: str, domain: str) -> tuple[set[str], set[str], dict[str, str], list[str]]:
+    """External search layer: searches public web snippets and directories for contacts if website yields 0."""
+    emails: set[str] = set()
+    phones: set[str] = set()
+    socials: dict[str, str] = {}
+    sources: list[str] = []
+
+    queries: list[str] = []
+    if domain:
+        clean_d = domain.lower().removeprefix("www.")
+        queries.append(f"{clean_d} contact email phone")
+        queries.append(f"{clean_d} customer care number support")
+    if company_name and company_name.lower() != domain.lower():
+        queries.append(f"{company_name} official contact email support")
+
+    try:
+        from ddgs import DDGS
+        with DDGS() as ddgs:
+            for q in queries[:2]:
+                try:
+                    results = ddgs.text(q, max_results=6)
+                    for r in (results or []):
+                        body = (r.get("title", "") + " " + r.get("body", ""))
+                        href = r.get("href") or r.get("url") or ""
+                        if href and href not in sources:
+                            sources.append(href)
+                        for e in EMAIL_RE.findall(body):
+                            clean_e = e.strip(".,;:!?)>]}\"'{}[] \t\n\r")
+                            if _valid_email(clean_e):
+                                emails.add(clean_e.lower())
+                        for p in PHONE_RE.findall(body):
+                            cleaned = _clean_phone(p)
+                            if cleaned:
+                                phones.add(cleaned)
+                    if emails or phones:
+                        break
+                except Exception:
+                    continue
+    except Exception as exc:
+        logger.debug("External contact search error: %s", exc)
+
+    return emails, phones, socials, sources
+
+
 def scrape_website_js_rendered(url: str, candidate_paths: list[str] | None = None) -> dict:
     """Fallback headless browser rendering using Playwright for JavaScript-heavy or SPA websites."""
     try:
@@ -423,7 +519,12 @@ def scrape_website_js_rendered(url: str, candidate_paths: list[str] | None = Non
     visited_urls: list[str] = []
     title = ""
 
-    # Limit concurrency of browser instances to protect memory
+    # Always ensure we start from the root homepage
+    root_url = get_root_url(url)
+    target_urls = [url]
+    if root_url.rstrip("/") != url.rstrip("/"):
+        target_urls.insert(0, root_url)
+
     with _playwright_lock:
         playwright_obj = None
         browser = None
@@ -445,36 +546,39 @@ def scrape_website_js_rendered(url: str, candidate_paths: list[str] | None = Non
             page = context.new_page()
             page.set_default_timeout(14000)
 
-            # 1. Load Homepage
-            try:
-                page.goto(url, wait_until="domcontentloaded", timeout=12000)
-                # Wait briefly for JS hydration (React/Vue/Next.js)
-                page.wait_for_timeout(1800)
-                # Scroll down to trigger lazy footers or contact widgets
+            # 1. Load Homepage / Root
+            for target in target_urls:
                 try:
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2);")
-                    page.wait_for_timeout(500)
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
-                    page.wait_for_timeout(500)
-                except Exception:
-                    pass
+                    page.goto(target, wait_until="domcontentloaded", timeout=12000)
+                    page.wait_for_timeout(1800)
+                    try:
+                        page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2);")
+                        page.wait_for_timeout(400)
+                        page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
+                        page.wait_for_timeout(400)
+                    except Exception:
+                        pass
 
-                content = page.content()
-                current_url = page.url or url
-                visited_urls.append(current_url)
+                    content = page.content()
+                    curr = page.url or target
+                    if curr not in visited_urls:
+                        visited_urls.append(curr)
 
-                em, ph, soc, t = _extract_contacts_from_html(content, current_url)
-                emails.update(em)
-                phones.update(ph)
-                socials.update(soc)
-                if not title and t:
-                    title = t
-            except Exception as e:
-                logger.debug("Playwright error loading homepage %s: %s", url, e)
+                    em, ph, soc, t = _extract_contacts_from_html(content, curr)
+                    emails.update(em)
+                    phones.update(ph)
+                    socials.update(soc)
+                    if not title and t:
+                        title = t
 
-            # 2. If still no contacts, try visiting a high-priority contact path
+                    if emails or phones:
+                        break
+                except Exception as e:
+                    logger.debug("Playwright error loading %s: %s", target, e)
+
+            # 2. Try high-priority contact paths if still empty
             if not emails and not phones and candidate_paths:
-                for candidate in candidate_paths[:2]:  # Try top 2 candidate contact paths
+                for candidate in candidate_paths[:2]:
                     if candidate.rstrip("/") in {u.rstrip("/") for u in visited_urls}:
                         continue
                     try:
@@ -517,7 +621,7 @@ def scrape_website_js_rendered(url: str, candidate_paths: list[str] | None = Non
 
     return {
         "emails": sorted(emails),
-        "phones": sorted(phones),
+        "phones": canonicalize_phones(phones),
         "socials": socials,
         "pages_visited": len(visited_urls),
         "source_urls": visited_urls,
@@ -526,13 +630,18 @@ def scrape_website_js_rendered(url: str, candidate_paths: list[str] | None = Non
     }
 
 
-def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: bool = True) -> dict:
-    """Primary website scraper with static crawling and automatic JS-rendered fallback."""
-    url = normalize_input_url(url) or url
-    parsed = urlparse(url)
+def scrape_website(
+    url: str,
+    max_pages: int = MAX_PAGES,
+    enable_js_fallback: bool = True,
+    company_name: str = "",
+) -> dict:
+    """Full-scale robust website scraper with multi-layered discovery: static crawl, JS rendering, and external search."""
+    cleaned_url = clean_target_url(url) or normalize_input_url(url) or url
+    parsed = urlparse(cleaned_url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         return {
-            "website": url,
+            "website": cleaned_url,
             "site_title": "",
             "emails": [],
             "phones": [],
@@ -544,8 +653,13 @@ def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: boo
             "js_rendered": False,
         }
 
-    queue: deque[str] = deque([url])
-    queued = {url.rstrip("/")}
+    # Always ensure root origin is crawled first rather than deep subpaths
+    root_origin = get_root_url(cleaned_url)
+    queue: deque[str] = deque([cleaned_url])
+    if root_origin.rstrip("/") != cleaned_url.rstrip("/"):
+        queue.appendleft(root_origin)
+
+    queued = {u.rstrip("/") for u in queue}
     visited: list[str] = []
     emails: set[str] = set()
     phones: set[str] = set()
@@ -553,12 +667,12 @@ def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: boo
     first_error: str | None = None
     title = ""
 
-    # Phase 1: Static Requests Crawl
+    # Phase 1: Static Crawl
     while queue and len(visited) < max_pages:
         current = queue.popleft()
         if current.rstrip("/") in {u.rstrip("/") for u in visited}:
             continue
-        if not _same_site(current, url):
+        if not _same_site(current, cleaned_url):
             continue
 
         html_content, final_url, error = _download_html(current)
@@ -570,7 +684,6 @@ def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: boo
         current_url = final_url or current
         visited.append(current_url)
 
-        # Extract Contacts & Socials
         em, ph, soc, t = _extract_contacts_from_html(html_content, current_url)
         emails.update(em)
         phones.update(ph)
@@ -578,7 +691,6 @@ def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: boo
         if not title and t:
             title = t
 
-        # Crawl internal links
         try:
             soup = BeautifulSoup(html_content, "html.parser")
             for a in soup.find_all("a", href=True):
@@ -594,9 +706,8 @@ def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: boo
         except Exception:
             pass
 
-        # Inject common candidate paths after home page
         if len(visited) == 1:
-            for candidate in _candidate_contact_paths(url):
+            for candidate in _candidate_contact_paths(cleaned_url):
                 candidate = candidate.rstrip("/")
                 if candidate not in queued:
                     queued.add(candidate)
@@ -605,9 +716,9 @@ def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: boo
     # Phase 2: Headless JS Rendered Fallback if no contacts found
     js_rendered = False
     if enable_js_fallback and not emails and not phones:
-        logger.info("No contacts found statically on %s. Launching JS-rendered fallback...", url)
-        candidates = _candidate_contact_paths(url)
-        js_result = scrape_website_js_rendered(url, candidate_paths=candidates)
+        logger.info("Phase 2: Static crawl yielded 0 contacts for %s. Launching Playwright JS fallback...", cleaned_url)
+        candidates = _candidate_contact_paths(cleaned_url)
+        js_result = scrape_website_js_rendered(cleaned_url, candidate_paths=candidates)
         if js_result.get("emails") or js_result.get("phones"):
             js_rendered = True
             emails.update(js_result.get("emails", []))
@@ -622,17 +733,37 @@ def scrape_website(url: str, max_pages: int = MAX_PAGES, enable_js_fallback: boo
             visited = js_result.get("source_urls", [])
             socials.update(js_result.get("socials", {}))
 
-    status = (
-        "found (js_rendered)" if (emails or phones) and js_rendered
-        else "found" if (emails or phones)
-        else ("no_contacts_found" if visited else "no_pages_scanned")
-    )
+    # Phase 3: External Search Layer Fallback if STILL 0 contacts found
+    search_fallback_used = False
+    if not emails and not phones:
+        domain = _host(cleaned_url)
+        logger.info("Phase 3: Still 0 contacts for %s. Executing external search contact discovery layer...", domain)
+        ext_emails, ext_phones, ext_soc, ext_sources = search_external_contacts(company_name, domain)
+        if ext_emails or ext_phones:
+            search_fallback_used = True
+            emails.update(ext_emails)
+            phones.update(ext_phones)
+            socials.update(ext_soc)
+            for s in ext_sources:
+                if s not in visited:
+                    visited.append(s)
+
+    # Final Status Computation
+    if emails or phones:
+        if js_rendered:
+            status = "found (js_rendered)"
+        elif search_fallback_used:
+            status = "found (web_search)"
+        else:
+            status = "found"
+    else:
+        status = "no_contacts_found" if visited else "no_pages_scanned"
 
     return {
-        "website": url,
+        "website": cleaned_url,
         "site_title": title,
         "emails": sorted(emails),
-        "phones": sorted(phones),
+        "phones": canonicalize_phones(phones),
         "socials": socials,
         "pages_visited": len(visited),
         "source_urls": visited,
