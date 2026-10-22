@@ -707,6 +707,14 @@ def download_job(job_id: str, format: str = "csv"):
             headers={"Content-Disposition": f'attachment; filename="company-contacts-{job_id}.xlsx"'},
         )
 
+    if format.lower() == "json":
+        json_bytes = json.dumps(results, indent=2).encode("utf-8")
+        return StreamingResponse(
+            io.BytesIO(json_bytes),
+            media_type="application/json; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="company-contacts-{job_id}.json"'},
+        )
+
     # CSV Export
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=headers)

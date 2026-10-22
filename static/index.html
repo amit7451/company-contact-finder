@@ -1041,9 +1041,211 @@
       pointer-events: none;
     }
 
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0) scale(1);
+    /* Apple Modal & Preview Sheet */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25), 0 0 1px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 980px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalSlideUp {
+      from { transform: scale(0.97) translateY(12px); }
+      to { transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      background: var(--surface);
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    .modal-subtitle {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+
+    .modal-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .modal-tabs {
+      background: var(--surface-subtle);
+      padding: 3px;
+      border-radius: 9px;
+      display: flex;
+      gap: 2px;
+    }
+
+    .modal-tab-btn {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .modal-tab-btn.active {
+      background: var(--surface);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .modal-close:hover {
+      background: var(--surface-subtle);
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+      background: #fafafc;
+      min-height: 280px;
+    }
+
+    .preview-scroll {
+      overflow-x: auto;
+      max-height: 56vh;
+    }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .preview-table th {
+      background: #f2f2f7;
+      color: var(--text-primary);
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-strong);
+      text-align: left;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .preview-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+    }
+
+    .preview-table tr:hover {
+      background: #ffffff;
+    }
+
+    .preview-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      background: #f2f2f7;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .preview-code-wrap {
+      padding: 18px 22px;
+      overflow-x: auto;
+      max-height: 56vh;
+      background: #fafafc;
+    }
+
+    .preview-code-wrap pre {
+      margin: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .modal-footer {
+      padding: 14px 22px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .modal-download-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     /* Footer */
@@ -1074,15 +1276,7 @@
 <body>
   <div class="shell">
     <header>
-      <div class="header-brand">
-        <span class="eyebrow">Enterprise Contact Intelligence</span>
-        <h1>Company Contact Finder</h1>
-        <p>Verified business emails, phone numbers & social profiles with headless browser fallback.</p>
-      </div>
-      <div class="header-pill">
-        <span class="dot-black"></span>
-        Headless Playwright Ready
-      </div>
+      <h1>Contact Finder</h1>
     </header>
 
     <div class="layout-grid">
@@ -1091,11 +1285,11 @@
         <div class="segmented-control">
           <button type="button" class="segment-btn active" id="tabInstantBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            Instant Search
+            Single
           </button>
           <button type="button" class="segment-btn" id="tabBatchBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            Batch & Files
+            Batch
           </button>
         </div>
 
@@ -1103,68 +1297,46 @@
           <!-- Instant Single View -->
           <div id="instantView">
             <div class="form-group">
-              <label class="form-label" for="instantQuery">
-                Company Name or Website URL
-                <span class="label-tag">Single Target</span>
-              </label>
+              <label class="form-label" for="instantQuery">Target</label>
               <input 
                 type="text" 
                 id="instantQuery" 
                 class="input-field" 
-                placeholder="e.g. Nike or drinkprime.in or https://stripe.com" 
+                placeholder="apple.com or Nike" 
                 autocomplete="off"
               />
-              <div class="field-hint">
-                Search via brand name (auto-discovers official website) or direct domain/URL.
-              </div>
             </div>
           </div>
 
           <!-- Batch & File Upload View -->
           <div id="batchView" style="display: none;">
             <div class="form-group">
-              <label class="form-label" for="batchTargets">
-                Paste Companies or Domains (One per line)
-                <span class="label-tag">Multi-Line</span>
-              </label>
+              <label class="form-label" for="batchTargets">Targets</label>
               <textarea 
                 id="batchTargets" 
                 class="input-field" 
-                placeholder="drinkprime.in&#10;OpenAI&#10;https://stripe.com&#10;Acme Corp"
+                placeholder="apple.com&#10;Nike&#10;stripe.com"
               ></textarea>
-              <div class="field-hint">
-                Mix domains and brand names freely; each line is categorized automatically.
-              </div>
             </div>
 
             <div class="form-group">
-              <label class="form-label">
-                Upload Spreadsheet File
-                <span class="label-tag">CSV • XLSX</span>
-              </label>
+              <label class="form-label">Spreadsheet</label>
               <div class="dropzone" id="fileDropzone">
                 <input type="file" id="sheetFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm" />
                 <div class="dropzone-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                 </div>
-                <div class="dropzone-title">Click to upload or drag & drop</div>
-                <div class="dropzone-sub">CSV, TSV, TXT, Excel (.xlsx, .xlsm) up to 25 MB</div>
+                <div class="dropzone-title">Upload CSV or Excel (.xlsx)</div>
                 <div class="dropzone-file-name" id="dropFileName"></div>
-              </div>
-              <div class="field-hint">
-                Auto-detects columns: <b>Brand, Company, Business, Client, URL, Website, Domain, Store, etc.</b>
               </div>
             </div>
           </div>
 
           <!-- Apple Switch Option -->
           <div class="option-card">
-            <div>
-              <div class="option-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                Headless JS Fallback (Playwright)
-              </div>
-              <div class="option-desc">Auto-activates headless Chromium for JavaScript/SPA sites if static crawl finds 0 contacts.</div>
+            <div class="option-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+              Headless Browser
             </div>
             <label class="switch">
               <input type="checkbox" id="enableJs" checked>
@@ -1175,7 +1347,6 @@
           <div class="btn-row">
             <button type="submit" class="btn btn-primary" id="submitBtn">
               <span>Find Contacts</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
             <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
           </div>
@@ -1187,37 +1358,30 @@
         <!-- Metric Stats Grid -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-label">Total Processed</div>
+            <div class="stat-label">Total</div>
             <div class="stat-value" id="statTotal">0</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Contacts Found</div>
+            <div class="stat-label">Found</div>
             <div class="stat-value" id="statFound">0</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Success Rate</div>
+            <div class="stat-label">Success</div>
             <div class="stat-value" id="statRate">0%</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">JS Fallbacks</div>
+            <div class="stat-label">Headless</div>
             <div class="stat-value" id="statJs">0</div>
           </div>
         </div>
 
         <div class="results-head">
-          <div>
-            <h2>Discovered Contacts</h2>
-            <p id="summaryText">Ready to discover business contacts. Search above to begin.</p>
-          </div>
+          <h2>Results</h2>
           <div class="export-actions">
-            <a class="btn btn-secondary btn-sm" id="csvExportBtn" href="#" hidden>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Export CSV
-            </a>
-            <a class="btn btn-secondary btn-sm" id="xlsxExportBtn" href="#" hidden>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Export Excel (.xlsx)
-            </a>
+            <button type="button" class="btn btn-secondary btn-sm" id="openExportPreviewBtn" style="display: none;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              Preview & Export
+            </button>
           </div>
         </div>
 
@@ -1232,8 +1396,7 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </div>
 
-          <h3 class="searching-center-title" id="searchingCenterTitle">Scanning Target…</h3>
-          <p class="searching-center-subtitle" id="searchingCenterSubtitle">Resolving official root domain & analyzing across 4 discovery layers</p>
+          <h3 class="searching-center-title" id="searchingCenterTitle">Scanning…</h3>
 
           <div class="progress-header">
             <span id="progressStatus">Scanning targets…</span>
@@ -1247,7 +1410,7 @@
           <div class="steps-flow" id="stepsFlow">
             <div class="step-item active" id="stepItem1">
               <span class="step-circle">1</span>
-              <span>Static Crawl</span>
+              <span>Static</span>
             </div>
             <div class="step-line" id="stepLine1"></div>
             <div class="step-item" id="stepItem2">
@@ -1257,7 +1420,7 @@
             <div class="step-line" id="stepLine2"></div>
             <div class="step-item" id="stepItem3">
               <span class="step-circle">3</span>
-              <span>Security Protocols</span>
+              <span>Security</span>
             </div>
             <div class="step-line" id="stepLine3"></div>
             <div class="step-item" id="stepItem4">
@@ -1280,8 +1443,8 @@
             <input type="text" id="filterInput" class="input-field" placeholder="Filter results..." />
           </div>
           <div class="quick-copy-btns">
-            <button type="button" class="btn btn-secondary btn-sm" id="copyAllEmailsBtn">Copy All Emails</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="copyAllPhonesBtn">Copy All Phones</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="copyAllEmailsBtn">Copy Emails</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="copyAllPhonesBtn">Copy Phones</button>
           </div>
         </div>
 
@@ -1304,17 +1467,67 @@
         <!-- Empty State Placeholder -->
         <div class="empty-state" id="emptyState">
           <div class="empty-state-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </div>
-          <h3>Awaiting Search</h3>
-          <p>Search by brand name or domain, paste a target list, or upload a spreadsheet to view verified emails, phones, and social links.</p>
+          <h3>No Contacts Yet</h3>
+          <p>Search a company or domain to begin.</p>
         </div>
       </section>
     </div>
 
-    <footer>
-      Company Contact Finder • Minimalist Architecture • Headless Chromium Engine
-    </footer>
+    <!-- Apple Preview & Export Sheet / Modal -->
+    <div class="modal-backdrop" id="previewModal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 id="modalTitle">Export Preview</h3>
+            <p class="modal-subtitle" id="modalSubtitle">0 records ready</p>
+          </div>
+          <div class="modal-header-actions">
+            <div class="modal-tabs">
+              <button type="button" class="modal-tab-btn active" id="modalTabGrid">Spreadsheet</button>
+              <button type="button" class="modal-tab-btn" id="modalTabCsv">Raw CSV</button>
+              <button type="button" class="modal-tab-btn" id="modalTabJson">JSON</button>
+            </div>
+            <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body">
+          <!-- Spreadsheet Grid Preview -->
+          <div class="preview-scroll" id="previewPaneGrid">
+            <table class="preview-table" id="previewTable">
+              <thead id="previewTableThead"></thead>
+              <tbody id="previewTableTbody"></tbody>
+            </table>
+          </div>
+
+          <!-- Raw CSV Code Preview -->
+          <div class="preview-code-wrap" id="previewPaneCsv" style="display: none;">
+            <pre id="previewCsvCode"></pre>
+          </div>
+
+          <!-- JSON Code Preview -->
+          <div class="preview-code-wrap" id="previewPaneJson" style="display: none;">
+            <pre id="previewJsonCode"></pre>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" id="modalCopyBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copy Data
+          </button>
+          <div class="modal-download-group">
+            <a class="btn btn-secondary btn-sm" id="modalDlCsv" href="#" download>Download .csv</a>
+            <a class="btn btn-primary btn-sm" id="modalDlXlsx" href="#" download>Download .xlsx</a>
+            <a class="btn btn-secondary btn-sm" id="modalDlJson" href="#" download>Download .json</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast">Copied to clipboard</div>
@@ -1339,7 +1552,6 @@
     const submitBtn = document.getElementById('submitBtn');
     const clearBtn = document.getElementById('clearBtn');
     const alertBox = document.getElementById('alertBox');
-    const summaryText = document.getElementById('summaryText');
 
     const statTotal = document.getElementById('statTotal');
     const statFound = document.getElementById('statFound');
@@ -1357,8 +1569,7 @@
     const resultsTbody = document.getElementById('resultsTbody');
     const emptyState = document.getElementById('emptyState');
 
-    const csvExportBtn = document.getElementById('csvExportBtn');
-    const xlsxExportBtn = document.getElementById('xlsxExportBtn');
+    const openExportPreviewBtn = document.getElementById('openExportPreviewBtn');
     const copyAllEmailsBtn = document.getElementById('copyAllEmailsBtn');
     const copyAllPhonesBtn = document.getElementById('copyAllPhonesBtn');
     const toast = document.getElementById('toast');
@@ -1367,9 +1578,27 @@
     const tickerText = document.getElementById('tickerText');
     const searchingHeroIcon = document.getElementById('searchingHeroIcon');
     const searchingCenterTitle = document.getElementById('searchingCenterTitle');
-    const searchingCenterSubtitle = document.getElementById('searchingCenterSubtitle');
 
-    // Tab Switching
+    // Preview Modal Elements
+    const previewModal = document.getElementById('previewModal');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalSubtitle = document.getElementById('modalSubtitle');
+    const modalTabGrid = document.getElementById('modalTabGrid');
+    const modalTabCsv = document.getElementById('modalTabCsv');
+    const modalTabJson = document.getElementById('modalTabJson');
+    const previewPaneGrid = document.getElementById('previewPaneGrid');
+    const previewPaneCsv = document.getElementById('previewPaneCsv');
+    const previewPaneJson = document.getElementById('previewPaneJson');
+    const previewTableThead = document.getElementById('previewTableThead');
+    const previewTableTbody = document.getElementById('previewTableTbody');
+    const previewCsvCode = document.getElementById('previewCsvCode');
+    const previewJsonCode = document.getElementById('previewJsonCode');
+    const modalCopyBtn = document.getElementById('modalCopyBtn');
+    const modalDlCsv = document.getElementById('modalDlCsv');
+    const modalDlXlsx = document.getElementById('modalDlXlsx');
+    const modalDlJson = document.getElementById('modalDlJson');
+
+    // Tab Switching (Single vs Batch)
     tabInstantBtn.addEventListener('click', () => {
       currentMode = 'instant';
       tabInstantBtn.classList.add('active');
@@ -1446,6 +1675,34 @@
       navigator.clipboard.writeText(text).then(() => {
         showToast(label);
       });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function getSocialIconSvg(platform) {
+      switch(platform) {
+        case 'linkedin':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>`;
+        case 'twitter':
+          return `<svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+        case 'facebook':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>`;
+        case 'instagram':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`;
+        case 'youtube':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>`;
+        case 'github':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>`;
+        default:
+          return `<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+      }
     }
 
     function renderTableRows(items) {
@@ -1557,7 +1814,7 @@
           badgeLabel = 'Found';
         } else if (item.status === 'no_contacts_found') {
           badgeClass = 'no_contacts';
-          badgeLabel = 'No Contacts (4 Steps Checked)';
+          badgeLabel = 'No Contacts';
         } else if (item.status === 'website_not_found') {
           badgeClass = 'error';
           badgeLabel = 'Site Not Found';
@@ -1572,34 +1829,6 @@
 
         resultsTbody.appendChild(tr);
       });
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-    }
-
-    function capitalize(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    function getSocialIconSvg(platform) {
-      switch(platform) {
-        case 'linkedin':
-          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>`;
-        case 'twitter':
-          return `<svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
-        case 'facebook':
-          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>`;
-        case 'instagram':
-          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`;
-        case 'youtube':
-          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>`;
-        case 'github':
-          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>`;
-        default:
-          return `<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
-      }
     }
 
     // Filter results live
@@ -1701,14 +1930,13 @@
       if (tickerInterval) clearInterval(tickerInterval);
       if (stepTimer) clearInterval(stepTimer);
 
-      // 1. Immediately remove older results, toolbar, and export buttons
+      // 1. Immediately remove older results, toolbar, and export button
       tableWrap.style.display = 'none';
       tableToolbar.style.display = 'none';
       resultsTbody.innerHTML = '';
-      csvExportBtn.hidden = true;
-      xlsxExportBtn.hidden = true;
+      if (openExportPreviewBtn) openExportPreviewBtn.style.display = 'none';
 
-      // 2. Immediately remove the idle empty state and search icon
+      // 2. Immediately remove the idle empty state
       emptyState.style.display = 'none';
 
       // 3. Reset top counters to active searching status
@@ -1717,22 +1945,19 @@
       statRate.textContent = '0%';
       statJs.textContent = '0';
 
-      // 4. Move searching process directly into the center of the Discovered section
+      // 4. Move searching process directly into the center
       progressWrap.className = 'progress-box searching-center';
       progressWrap.style.display = 'block';
 
       if (searchingCenterTitle) {
         searchingCenterTitle.textContent = targetLabel ? `Scanning "${targetLabel}"` : 'Scanning Targets…';
       }
-      if (searchingCenterSubtitle) {
-        searchingCenterSubtitle.textContent = 'Resolving official root domain & executing 4-layer contact intelligence scan';
-      }
 
       searchStartTime = Date.now();
       setStepState(1);
 
       let msgIdx = 0;
-      setTickerText(`Step 1/4: Initializing multi-layer discovery pipeline for ${targetLabel || 'target'}…`);
+      setTickerText(`Step 1/4: Initializing discovery pipeline for ${targetLabel || 'target'}…`);
 
       tickerInterval = setInterval(() => {
         msgIdx = (msgIdx + 1) % SEARCH_TICKER_MESSAGES.length;
@@ -1777,13 +2002,205 @@
 
         const anyContacts = results.some(r => (r.emails && r.emails.length) || (r.phones && r.phones.length));
         if (anyContacts) {
-          setTickerText('\u2713 4-step scan completed. Discovered verified contacts displayed below.');
+          setTickerText('\u2713 Scan completed. Verified contacts displayed below.');
         } else {
-          setTickerText('4-step scan completed. No verified business contacts found after 4-layer scan.');
+          setTickerText('Scan completed. No verified contacts found.');
         }
       } else {
         setTickerText('Scan interrupted. Check connection and retry.');
       }
+    }
+
+    // Modal CSV Formatting & Population Logic
+    function formatCellCsv(val) {
+      if (val === null || val === undefined) return '""';
+      const str = String(val);
+      if (/[",\r\n]/.test(str)) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function generateCsvString(results) {
+      const headers = [
+        "Company",
+        "Website",
+        "Emails",
+        "Phone Numbers",
+        "LinkedIn",
+        "Twitter",
+        "Facebook",
+        "Instagram",
+        "Status",
+        "Pages Crawled"
+      ];
+      const rows = [headers.join(",")];
+
+      results.forEach(item => {
+        const company = item.company || item.site_title || item.website || "";
+        const website = item.website || "";
+        const emails = (item.emails || []).join("; ");
+        const phones = (item.phones || []).join("; ");
+        const socials = item.socials || {};
+        const linkedin = socials.linkedin || "";
+        const twitter = socials.twitter || "";
+        const facebook = socials.facebook || "";
+        const instagram = socials.instagram || "";
+        const status = item.status || "";
+        const pages = item.pages_visited || "";
+
+        const row = [
+          formatCellCsv(company),
+          formatCellCsv(website),
+          formatCellCsv(emails),
+          formatCellCsv(phones),
+          formatCellCsv(linkedin),
+          formatCellCsv(twitter),
+          formatCellCsv(facebook),
+          formatCellCsv(instagram),
+          formatCellCsv(status),
+          formatCellCsv(pages)
+        ];
+        rows.push(row.join(","));
+      });
+
+      return rows.join("\r\n");
+    }
+
+    function populatePreviewModal(results, jobId) {
+      const total = results.length;
+      if (modalSubtitle) {
+        modalSubtitle.textContent = `${total} record${total === 1 ? '' : 's'} ready`;
+      }
+
+      // 1. Spreadsheet Grid Table
+      if (previewTableThead) {
+        previewTableThead.innerHTML = `
+          <tr>
+            <th>Company</th>
+            <th>Website</th>
+            <th>Emails</th>
+            <th>Phones</th>
+            <th>Socials</th>
+            <th>Status</th>
+            <th>Pages</th>
+          </tr>
+        `;
+      }
+      if (previewTableTbody) {
+        previewTableTbody.innerHTML = '';
+        results.forEach(item => {
+          const tr = document.createElement('tr');
+          const brand = item.company || item.site_title || item.website || 'Unknown';
+          const site = item.website || '';
+          const emails = (item.emails || []).join(', ') || '—';
+          const phones = (item.phones || []).join(', ') || '—';
+          const socials = Object.keys(item.socials || {}).join(', ') || '—';
+          const status = item.status || 'scanned';
+          const pages = item.pages_visited || 0;
+
+          tr.innerHTML = `
+            <td><strong>${escapeHtml(brand)}</strong></td>
+            <td>${site ? `<a href="${escapeHtml(site)}" target="_blank" rel="noopener noreferrer">${escapeHtml(site)}</a>` : '—'}</td>
+            <td>${escapeHtml(emails)}</td>
+            <td>${escapeHtml(phones)}</td>
+            <td>${escapeHtml(socials)}</td>
+            <td><span class="preview-badge">${escapeHtml(status)}</span></td>
+            <td>${pages}</td>
+          `;
+          previewTableTbody.appendChild(tr);
+        });
+      }
+
+      // 2. Raw CSV Preview
+      const csvContent = generateCsvString(results);
+      if (previewCsvCode) {
+        previewCsvCode.textContent = csvContent;
+      }
+
+      // 3. JSON Preview
+      const jsonContent = JSON.stringify(results, null, 2);
+      if (previewJsonCode) {
+        previewJsonCode.textContent = jsonContent;
+      }
+
+      // 4. Download buttons
+      if (jobId) {
+        if (modalDlCsv) modalDlCsv.href = `/api/jobs/${jobId}/download?format=csv`;
+        if (modalDlXlsx) modalDlXlsx.href = `/api/jobs/${jobId}/download?format=xlsx`;
+        if (modalDlJson) modalDlJson.href = `/api/jobs/${jobId}/download?format=json`;
+      } else {
+        const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        if (modalDlCsv) {
+          modalDlCsv.href = URL.createObjectURL(csvBlob);
+          modalDlCsv.download = 'company-contacts.csv';
+        }
+        const jsonBlob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+        if (modalDlJson) {
+          modalDlJson.href = URL.createObjectURL(jsonBlob);
+          modalDlJson.download = 'company-contacts.json';
+        }
+      }
+    }
+
+    function switchModalTab(tab) {
+      modalTabGrid.classList.toggle('active', tab === 'grid');
+      modalTabCsv.classList.toggle('active', tab === 'csv');
+      modalTabJson.classList.toggle('active', tab === 'json');
+
+      previewPaneGrid.style.display = tab === 'grid' ? 'block' : 'none';
+      previewPaneCsv.style.display = tab === 'csv' ? 'block' : 'none';
+      previewPaneJson.style.display = tab === 'json' ? 'block' : 'none';
+    }
+
+    modalTabGrid.addEventListener('click', () => switchModalTab('grid'));
+    modalTabCsv.addEventListener('click', () => switchModalTab('csv'));
+    modalTabJson.addEventListener('click', () => switchModalTab('json'));
+
+    function openPreviewModal() {
+      if (!allResults || !allResults.length) {
+        showToast('No results to preview yet');
+        return;
+      }
+      populatePreviewModal(allResults, currentJobId);
+      previewModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePreviewModal() {
+      previewModal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    if (openExportPreviewBtn) {
+      openExportPreviewBtn.addEventListener('click', openPreviewModal);
+    }
+    if (modalCloseBtn) {
+      modalCloseBtn.addEventListener('click', closePreviewModal);
+    }
+    if (previewModal) {
+      previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal) closePreviewModal();
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && previewModal && previewModal.style.display !== 'none') {
+        closePreviewModal();
+      }
+    });
+
+    if (modalCopyBtn) {
+      modalCopyBtn.addEventListener('click', () => {
+        let activeTab = 'grid';
+        if (modalTabCsv.classList.contains('active')) activeTab = 'csv';
+        if (modalTabJson.classList.contains('active')) activeTab = 'json';
+
+        if (activeTab === 'json') {
+          copyToClipboard(previewJsonCode.textContent, 'JSON copied to clipboard');
+        } else {
+          copyToClipboard(previewCsvCode.textContent, 'CSV copied to clipboard');
+        }
+      });
     }
 
     // Form Submit
@@ -1803,7 +2220,6 @@
 
         submitBtn.disabled = true;
         submitBtn.innerHTML = `<span>Searching…</span>`;
-        summaryText.textContent = `Scanning "${query}"…`;
         progressBar.style.width = '45%';
         progressStatus.textContent = 'Resolving and analyzing pages…';
         progressNumbers.textContent = '1 / 1';
@@ -1845,7 +2261,6 @@
 
       submitBtn.disabled = true;
       submitBtn.innerHTML = `<span>Processing Batch…</span>`;
-      summaryText.textContent = 'Queuing targets and scanning…';
       progressBar.style.width = '0%';
       progressStatus.textContent = 'Preparing scan queue…';
       progressNumbers.textContent = '0 / 0';
@@ -1889,7 +2304,6 @@
         progressBar.style.width = `${pct}%`;
         progressNumbers.textContent = `${done} / ${total}`;
         progressStatus.textContent = job.status === 'completed' ? 'Scan Completed' : job.message || 'Scanning pages…';
-        summaryText.textContent = `${done} of ${total} processed. ${job.message || ''}`;
 
         allResults = job.results || [];
         updateStats(allResults);
@@ -1910,10 +2324,7 @@
               tableWrap.style.display = 'block';
               renderTableRows(allResults);
 
-              csvExportBtn.href = `/api/jobs/${jobId}/download?format=csv`;
-              csvExportBtn.hidden = false;
-              xlsxExportBtn.href = `/api/jobs/${jobId}/download?format=xlsx`;
-              xlsxExportBtn.hidden = false;
+              if (openExportPreviewBtn) openExportPreviewBtn.style.display = 'inline-flex';
             }
           } else {
             showAlert(job.message || 'Scan job failed.');
@@ -1945,11 +2356,11 @@
       progressWrap.className = 'progress-box';
       tableWrap.style.display = 'none';
       tableToolbar.style.display = 'none';
+      if (openExportPreviewBtn) openExportPreviewBtn.style.display = 'none';
       resultsTbody.innerHTML = '';
       allResults = [];
       updateStats([]);
       emptyState.style.display = 'block';
-      summaryText.textContent = 'Ready to discover business contacts. Search above to begin.';
       instantQuery.focus();
     });
   </script>
