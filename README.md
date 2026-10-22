@@ -1,5 +1,7 @@
 # Company Contact Finder ⚡ Full Scale
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/amit7451/company-contact-finder)
+
 A powerful, full-scale business contact discovery application designed to extract publicly listed emails, phone numbers, and social profiles directly from company websites. Features automated headless Chromium fallback for JavaScript-rendered Single Page Applications (React, Vue, Next.js), smart column synonym detection for spreadsheets, and instant search via company name OR website domain.
 
 ---
@@ -55,6 +57,20 @@ Double-click `run_windows.bat`. It will create `.venv`, install all packages, in
    python -m uvicorn app:app --host 127.0.0.1 --port 8000
    ```
 5. Open your browser at **http://127.0.0.1:8000**.
+
+---
+
+## ☁️ Free 1-Click Cloud Deployment (Render)
+
+Deploy directly from your GitHub repo for free with a unique short URL (e.g. `https://contact-finder.onrender.com`):
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/amit7451/company-contact-finder)
+
+1. Click the button above or go to [dashboard.render.com](https://dashboard.render.com) and sign in with GitHub.
+2. Select **New Web Service** and choose repository `amit7451/company-contact-finder`.
+3. Choose a unique short name for your web service (e.g. `contact-finder` or `c-finder`).
+4. Select **Docker** environment and **Free** plan.
+5. Click **Deploy Web Service**. Render builds the Docker image and launches the app 24/7 at your unique short URL.
 
 ---
 
