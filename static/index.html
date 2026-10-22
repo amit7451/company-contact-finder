@@ -3,263 +3,1515 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Company Contact Finder</title>
+  <title>Company Contact Finder — Enterprise Email, Phone & Social Discovery</title>
+  <meta name="description" content="Extract verified business emails, phone numbers, and social links from company websites with automated headless JavaScript rendering fallback." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root { color-scheme: light; --ink:#17212f; --muted:#687487; --line:#dfe5ec; --soft:#f5f7fa; --accent:#176b87; --accent-dark:#115369; --good:#147d52; --warn:#8d5c16; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:#f4f6f8; color:var(--ink); font:15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .shell { max-width:1240px; margin:0 auto; padding:36px 22px 54px; }
-    header { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:26px; }
-    .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
-    h1 { font-size:clamp(28px,4vw,40px); letter-spacing:-.04em; line-height:1.1; margin:8px 0 10px; }
-    .sub { color:var(--muted); max-width:700px; margin:0; }
-    .local-tag { white-space:nowrap; border:1px solid var(--line); background:white; border-radius:999px; padding:8px 12px; color:#455266; font-size:12px; font-weight:700; }
-    .layout { display:grid; grid-template-columns:minmax(300px,370px) minmax(0,1fr); gap:20px; align-items:start; }
-    .panel { background:white; border:1px solid var(--line); border-radius:16px; box-shadow:0 3px 14px rgba(19,36,56,.035); }
-    .form-panel { padding:22px; }
-    .panel h2 { font-size:17px; margin:0 0 5px; letter-spacing:-.02em; }
-    .help { color:var(--muted); font-size:13px; margin:0 0 18px; }
-    label { display:block; font-size:13px; font-weight:750; margin:16px 0 7px; }
-    textarea { resize:vertical; width:100%; min-height:145px; border:1px solid #cbd4df; border-radius:10px; padding:12px 13px; font:inherit; outline:none; }
-    textarea:focus, input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(23,107,135,.12); }
-    .hint { color:var(--muted); font-size:12px; margin-top:6px; }
-    .file-box { border:1px dashed #bcc8d5; border-radius:11px; padding:14px; background:#fafbfd; }
-    input[type=file] { max-width:100%; font-size:13px; }
-    .file-types { font-size:12px; color:var(--muted); margin-top:6px; }
-    .actions { display:flex; gap:9px; margin-top:20px; flex-wrap:wrap; }
-    button, .download { cursor:pointer; border:0; border-radius:9px; padding:11px 14px; font:inherit; font-size:13px; font-weight:800; text-decoration:none; display:inline-flex; justify-content:center; align-items:center; gap:8px; }
-    button.primary { background:var(--accent); color:white; flex:1; }
-    button.primary:hover { background:var(--accent-dark); }
-    button.secondary { background:#eef2f6; color:#283647; }
-    button:disabled { opacity:.55; cursor:not-allowed; }
-    .notice { background:#f7fafc; border:1px solid #e3e9f0; padding:12px; border-radius:10px; color:#59687a; font-size:12px; margin-top:18px; }
-    .results-panel { min-width:0; overflow:hidden; }
-    .results-head { padding:20px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
-    .results-head .help { margin:3px 0 0; }
-    .download-row { display:flex; gap:8px; flex-wrap:wrap; }
-    .download { background:#eef2f6; color:#253548; padding:9px 11px; }
-    .download:hover { background:#e2e8ef; }
-    .progress-wrap { padding:14px 22px; border-bottom:1px solid var(--line); display:none; }
-    .progress-text { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; gap:12px; margin-bottom:8px; }
-    .progress { height:7px; background:#edf1f5; border-radius:99px; overflow:hidden; }
-    .bar { width:0; height:100%; background:var(--accent); transition:width .25s ease; }
-    .table-wrap { overflow:auto; max-height:670px; }
-    table { border-collapse:separate; border-spacing:0; width:100%; min-width:800px; font-size:12px; }
-    thead th { position:sticky; top:0; background:#f8fafc; z-index:1; color:#5c6878; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:12px 13px; border-bottom:1px solid var(--line); }
-    tbody td { border-bottom:1px solid #edf0f4; padding:12px 13px; vertical-align:top; max-width:260px; overflow-wrap:anywhere; }
-    tbody tr:hover { background:#fafcfd; }
-    .empty { min-height:360px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); padding:38px; text-align:center; }
-    .empty-icon { height:48px; width:48px; border-radius:14px; display:grid; place-items:center; background:#edf4f7; color:var(--accent); font-size:22px; margin-bottom:12px; }
-    .empty strong { color:#334255; font-size:14px; }
-    .empty p { max-width:320px; margin:7px 0 0; font-size:13px; }
-    .status { display:inline-block; padding:4px 7px; border-radius:5px; background:#eef2f6; color:#536174; font-size:10px; font-weight:850; white-space:nowrap; }
-    .status.found { color:#086746; background:#e4f5ed; }
-    .status.no_contacts_found { color:#81510b; background:#fff2d9; }
-    .status.website_not_found, .status.invalid_url, .status.error, .status.no_pages_scanned { color:#963b32; background:#fdebe8; }
-    .links { display:flex; flex-direction:column; gap:5px; }
-    a.source { color:var(--accent); text-decoration:none; }
-    a.source:hover { text-decoration:underline; }
-    .err { color:#a33c34; padding:12px 22px; font-size:13px; display:none; }
-    .footer { color:#7a8594; font-size:11px; text-align:center; margin-top:20px; }
-    @media (max-width:880px) { .layout { grid-template-columns:1fr; } header { flex-direction:column; } .results-head { flex-direction:column; } .shell { padding:25px 14px 38px; } }
+    :root {
+      --bg-base: #0b0f17;
+      --bg-surface: #121824;
+      --bg-surface-elevated: #1a2332;
+      --bg-glass: rgba(18, 24, 36, 0.75);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --border-focus: #3b82f6;
+
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-glow: rgba(59, 130, 246, 0.35);
+
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-emerald-bg: rgba(16, 185, 129, 0.12);
+      --accent-amber: #f59e0b;
+      --accent-amber-bg: rgba(245, 158, 11, 0.12);
+      --accent-rose: #f43f5e;
+      --accent-rose-bg: rgba(244, 63, 94, 0.12);
+      --accent-purple: #8b5cf6;
+      --accent-purple-bg: rgba(139, 92, 246, 0.14);
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-pill: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.18), transparent 70%),
+        radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.08), transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.08), transparent 50%);
+    }
+
+    .shell {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+
+    /* Header Section */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .brand-icon svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .title-area h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-area p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text-muted);
+    }
+
+    .status-pill.active {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* Main Grid Layout */
+    .layout-grid {
+      display: grid;
+      grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* Glass Panels */
+    .panel {
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.2s ease;
+    }
+
+    .panel:hover {
+      border-color: var(--border-strong);
+    }
+
+    /* Mode Tabs */
+    .tab-bar {
+      display: flex;
+      background: var(--bg-surface-elevated);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .label-badge {
+      font-size: 11px;
+      color: var(--accent-cyan);
+      font-weight: 500;
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 12px 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      background: var(--bg-surface-elevated);
+    }
+
+    textarea.input-field {
+      resize: vertical;
+      min-height: 120px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Dropzone Upload */
+    .dropzone {
+      border: 2px dashed var(--border-subtle);
+      background: rgba(18, 24, 36, 0.4);
+      border-radius: var(--radius-md);
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.05);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .dropzone-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      color: var(--accent-cyan);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .dropzone-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .dropzone-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .dropzone-file-name {
+      display: none;
+      font-size: 12px;
+      color: #38bdf8;
+      font-weight: 600;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+
+    /* Options toggle */
+    .option-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 12px;
+    }
+
+    .option-info {
+      font-size: 12px;
+    }
+
+    .option-title {
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .option-desc {
+      color: var(--text-dim);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    /* Switch toggle */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+      background-color: var(--text-muted);
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); border-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(16px); background-color: white; }
+
+    /* Button Actions */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 12px 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      flex: 1;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px var(--primary-glow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+    }
+
+    .btn-secondary:hover {
+      color: var(--text-main);
+      border-color: var(--border-strong);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Dashboard & Metric Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-top: 4px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .stat-value.highlight { color: #38bdf8; }
+    .stat-value.success { color: #34d399; }
+    .stat-value.purple { color: #a78bfa; }
+
+    /* Results Header & Actions */
+    .results-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .results-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .results-head h2 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .results-head p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .export-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sm {
+      padding: 7px 12px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    /* Search/Filter Bar inside Results */
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      max-width: 320px;
+    }
+
+    .search-box input {
+      padding-left: 32px;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--text-dim);
+    }
+
+    .quick-copy-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* Progress Display */
+    .progress-box {
+      display: none;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+
+    .progress-track {
+      height: 6px;
+      background: var(--bg-surface-elevated);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+      transition: width 0.3s ease;
+    }
+
+    /* Results Table */
+    .table-wrap {
+      overflow-x: auto;
+      max-height: 650px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 960px;
+      font-size: 12px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--bg-surface-elevated);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 2;
+    }
+
+    tbody td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: top;
+      color: #e2e8f0;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Data presentation */
+    .company-col strong {
+      font-size: 13px;
+      color: var(--text-main);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .company-col a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .company-col a:hover {
+      text-decoration: underline;
+    }
+
+    .contact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .contact-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      width: fit-content;
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .contact-item a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .contact-item a:hover {
+      color: var(--accent-cyan);
+    }
+
+    .copy-icon-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 2px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 3px;
+    }
+    .copy-icon-btn:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Social Icons Row */
+    .social-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .social-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .social-badge:hover {
+      color: white;
+      background: var(--primary);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: var(--radius-pill);
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-badge.found {
+      background: var(--accent-emerald-bg);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-badge.found_js {
+      background: var(--accent-purple-bg);
+      color: #c084fc;
+      border: 1px solid rgba(192, 132, 252, 0.3);
+    }
+
+    .status-badge.no_contacts {
+      background: var(--accent-amber-bg);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    .status-badge.error, .status-badge.not_found {
+      background: var(--accent-rose-bg);
+      color: #fb7185;
+      border: 1px solid rgba(251, 113, 133, 0.3);
+    }
+
+    /* Empty and Error states */
+    .empty-state {
+      padding: 50px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      color: var(--text-dim);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .empty-state h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      font-size: 12px;
+      max-width: 380px;
+      margin: 0 auto;
+      color: var(--text-dim);
+    }
+
+    .alert-banner {
+      display: none;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 12.5px;
+      line-height: 1.4;
+    }
+    .alert-banner.error {
+      background: var(--accent-rose-bg);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fda4af;
+    }
+    .alert-banner.success {
+      background: var(--accent-emerald-bg);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e293b;
+      color: white;
+      border: 1px solid var(--border-strong);
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: all 0.25s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    @media (max-width: 1024px) {
+      .layout-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
   </style>
 </head>
 <body>
-  <main class="shell">
+  <div class="shell">
     <header>
-      <div>
-        <div class="eyebrow">Local research utility</div>
-        <h1>Company Contact Finder</h1>
-        <p class="sub">Find publicly listed business emails and phone numbers from company websites. Scan one site, paste a list, or upload a spreadsheet and export the results.</p>
+      <div class="brand-wrap">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+          </svg>
+        </div>
+        <div class="title-area">
+          <h1>Company Contact Finder</h1>
+          <p>Instant Business Email, Phone & Social Discovery with Headless JS Fallback</p>
+        </div>
       </div>
-      <div class="local-tag">Runs on your computer</div>
+      <div class="header-badges">
+        <div class="status-pill active">
+          <div class="pulse-dot"></div>
+          Headless JS Engine Ready
+        </div>
+        <div class="status-pill">
+          Synonym Auto-Detection Active
+        </div>
+      </div>
     </header>
 
-    <div class="layout">
-      <section class="panel form-panel">
-        <h2>Start a scan</h2>
-        <p class="help">Enter a website/domain or company name. Use one entry per line for a list.</p>
-        <form id="scanForm">
-          <label for="targets">Website or company name</label>
-          <textarea id="targets" placeholder="drinkprime.in&#10;Example Brand&#10;https://another-company.com"></textarea>
-          <div class="hint">URLs are scanned directly. Company names use best-effort web search to find a likely official site.</div>
+    <div class="layout-grid">
+      <!-- Search & Input Panel -->
+      <section class="panel">
+        <div class="tab-bar">
+          <button type="button" class="tab-btn active" id="tabInstantBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Instant Search
+          </button>
+          <button type="button" class="tab-btn" id="tabBatchBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            Bulk List & Files
+          </button>
+        </div>
 
-          <label for="sheet">Or upload a company sheet</label>
-          <div class="file-box">
-            <input id="sheet" type="file" accept=".csv,.tsv,.txt,.xlsx,.xlsm" />
-            <div class="file-types">CSV, TSV, TXT, XLSX • up to 10 MB • up to 1,000 rows</div>
+        <form id="searchForm">
+          <!-- Instant Search View -->
+          <div id="instantView">
+            <div class="form-group">
+              <label class="form-label" for="instantQuery">
+                Company Name or Website URL
+                <span class="label-badge">Searchable via either</span>
+              </label>
+              <input 
+                type="text" 
+                id="instantQuery" 
+                class="input-field" 
+                placeholder="e.g. Stripe or drinkprime.in or https://airbnb.com" 
+                autocomplete="off"
+              />
+              <div class="field-hint">
+                Enter just a brand name (e.g. <code>Nike</code>) or direct domain/URL (e.g. <code>nike.com</code>).
+              </div>
+            </div>
           </div>
-          <div class="hint">For spreadsheets, use columns like <b>Company</b> and <b>Website</b>. A one-column list is also supported.</div>
 
-          <div class="actions">
-            <button class="primary" id="startBtn" type="submit">Find contacts <span aria-hidden="true">→</span></button>
-            <button class="secondary" id="clearBtn" type="button">Clear</button>
+          <!-- Batch & File Upload View -->
+          <div id="batchView" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="batchTargets">
+                Paste Company Names or URLs (One per line)
+                <span class="label-badge">Auto-Categorized</span>
+              </label>
+              <textarea 
+                id="batchTargets" 
+                class="input-field" 
+                placeholder="drinkprime.in&#10;OpenAI&#10;https://stripe.com&#10;Acme Corp"
+              ></textarea>
+              <div class="field-hint">
+                You can mix domains and brand names freely; each line is handled automatically.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                Or Upload Spreadsheet / List File
+                <span class="label-badge">Smart Synonyms</span>
+              </label>
+              <div class="dropzone" id="fileDropzone">
+                <input type="file" id="sheetFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm" />
+                <div class="dropzone-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                <div class="dropzone-title">Click to browse or drop file here</div>
+                <div class="dropzone-sub">Supports CSV, TSV, TXT, Excel (.xlsx, .xlsm) up to 25 MB</div>
+                <div class="dropzone-file-name" id="dropFileName"></div>
+              </div>
+              <div class="field-hint">
+                Auto-detects column names: <b>Brand, Company, Business, Client, Website, URL, Domain, Site, etc.</b>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature Toggle -->
+          <div class="option-card">
+            <div class="option-info">
+              <div class="option-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                JS-Rendered Fallback (Playwright)
+              </div>
+              <div class="option-desc">Auto-activates headless Chromium for React / Vue / SPA sites when contacts aren't found statically.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="enableJs" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="btn-row">
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <span>Find Contacts</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+            <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
           </div>
         </form>
-        <div class="notice"><b>Responsible crawling:</b> scans a limited number of public pages per site, checks robots.txt, stays on the same host, and does not access accounts or bypass blocks. Search-based website matches should be reviewed before outreach.</div>
       </section>
 
+      <!-- Results & Metrics Section -->
       <section class="panel results-panel">
+        <!-- Live Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Processed</div>
+            <div class="stat-value" id="statTotal">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Contacts Found</div>
+            <div class="stat-value success" id="statFound">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Success Rate</div>
+            <div class="stat-value highlight" id="statRate">0%</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">JS Fallbacks Used</div>
+            <div class="stat-value purple" id="statJs">0</div>
+          </div>
+        </div>
+
         <div class="results-head">
           <div>
-            <h2>Scan results</h2>
-            <p class="help" id="summary">Your extracted contacts will appear here.</p>
+            <h2>Discovered Contacts</h2>
+            <p id="summaryText">Ready to discover business contacts. Search above to begin.</p>
           </div>
-          <div class="download-row">
-            <a class="download" id="csvLink" href="#" hidden>Download CSV</a>
-            <a class="download" id="xlsxLink" href="#" hidden>Download Excel</a>
+          <div class="export-actions">
+            <a class="btn btn-secondary btn-sm" id="csvExportBtn" href="#" hidden>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Export CSV
+            </a>
+            <a class="btn btn-secondary btn-sm" id="xlsxExportBtn" href="#" hidden>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Export Excel (.xlsx)
+            </a>
           </div>
         </div>
-        <div class="progress-wrap" id="progressWrap">
-          <div class="progress-text"><span id="progressLabel">Preparing scan…</span><span id="progressCount">0 / 0</span></div>
-          <div class="progress"><div class="bar" id="progressBar"></div></div>
+
+        <div class="alert-banner" id="alertBox"></div>
+
+        <!-- Progress Tracker -->
+        <div class="progress-box" id="progressWrap">
+          <div class="progress-header">
+            <span id="progressStatus">Scanning targets…</span>
+            <span id="progressNumbers">0 / 0</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progressBar"></div>
+          </div>
         </div>
-        <div class="err" id="errorBox"></div>
-        <div id="emptyState" class="empty">
-          <div class="empty-icon">⌕</div>
-          <strong>Ready when you are</strong>
-          <p>Start a scan to see detected emails, phone numbers, pages checked, and source URLs in one table.</p>
+
+        <!-- Toolbar: Search Table & Quick Copy -->
+        <div class="table-toolbar" id="tableToolbar" style="display: none;">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="filterInput" class="input-field" placeholder="Filter results..." />
+          </div>
+          <div class="quick-copy-btns">
+            <button type="button" class="btn btn-secondary btn-sm" id="copyAllEmailsBtn">Copy All Emails</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="copyAllPhonesBtn">Copy All Phones</button>
+          </div>
         </div>
-        <div class="table-wrap" id="tableWrap" hidden>
+
+        <!-- Results Table -->
+        <div class="table-wrap" id="tableWrap" style="display: none;">
           <table>
-            <thead><tr><th>Company / Site</th><th>Emails</th><th>Phone numbers</th><th>Pages</th><th>Status</th><th>Sources</th></tr></thead>
-            <tbody id="resultsBody"></tbody>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Company / Website</th>
+                <th style="width: 25%;">Emails</th>
+                <th style="width: 20%;">Phone Numbers</th>
+                <th style="width: 15%;">Social Profiles</th>
+                <th style="width: 16%;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTbody"></tbody>
           </table>
+        </div>
+
+        <!-- Empty State Placeholder -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-state-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <h3>Awaiting Search</h3>
+          <p>Search by company name or domain, paste a list, or drop a spreadsheet to discover verified contact emails, phone numbers, and social links.</p>
         </div>
       </section>
     </div>
-    <div class="footer">Only collect and use contact information for lawful, relevant business communication. Respect opt-outs and applicable privacy / anti-spam rules.</div>
-  </main>
+
+    <footer>
+      Company Contact Finder v2.0 • Headless JS-Rendered Fallback Engine • Responsible & Polite Crawling
+    </footer>
+  </div>
+
+  <div class="toast" id="toast">Copied to clipboard</div>
 
   <script>
-    const form = document.getElementById('scanForm');
-    const targets = document.getElementById('targets');
-    const sheet = document.getElementById('sheet');
-    const startBtn = document.getElementById('startBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const summary = document.getElementById('summary');
-    const progressWrap = document.getElementById('progressWrap');
-    const progressLabel = document.getElementById('progressLabel');
-    const progressCount = document.getElementById('progressCount');
-    const progressBar = document.getElementById('progressBar');
-    const errorBox = document.getElementById('errorBox');
-    const emptyState = document.getElementById('emptyState');
-    const tableWrap = document.getElementById('tableWrap');
-    const resultsBody = document.getElementById('resultsBody');
-    const csvLink = document.getElementById('csvLink');
-    const xlsxLink = document.getElementById('xlsxLink');
-    let activeJobId = null;
-    let pollTimer = null;
+    // State & Elements
+    let currentMode = 'instant'; // 'instant' or 'batch'
+    let currentJobId = null;
+    let pollInterval = null;
+    let allResults = [];
 
-    function showError(message) {
-      errorBox.textContent = message;
-      errorBox.style.display = message ? 'block' : 'none';
-    }
-    function setBusy(value) {
-      startBtn.disabled = value;
-      startBtn.textContent = value ? 'Scanning…' : 'Find contacts →';
-    }
-    function textCell(value) {
-      const td = document.createElement('td');
-      td.textContent = value || '—';
-      return td;
-    }
-    function renderResults(results) {
-      resultsBody.replaceChildren();
-      for (const item of results) {
-        const tr = document.createElement('tr');
-        const name = document.createElement('td');
-        const title = document.createElement('strong');
-        title.textContent = item.company || item.site_title || item.website || 'Unknown';
-        name.appendChild(title);
-        const br = document.createElement('br'); name.appendChild(br);
-        const siteLink = document.createElement('a');
-        siteLink.className = 'source'; siteLink.href = item.website || '#'; siteLink.target = '_blank'; siteLink.rel = 'noopener noreferrer';
-        siteLink.textContent = item.website || 'No website'; name.appendChild(siteLink);
-        tr.appendChild(name);
-        tr.appendChild(textCell((item.emails || []).join('\n')));
-        tr.appendChild(textCell((item.phones || []).join('\n')));
-        tr.appendChild(textCell(String(item.pages_visited ?? 0)));
-        const statusCell = document.createElement('td');
-        const badge = document.createElement('span'); badge.className = 'status ' + (item.status || ''); badge.textContent = (item.status || 'unknown').replaceAll('_', ' '); statusCell.appendChild(badge);
-        if (item.error || item.search_note) {
-          const note = document.createElement('div'); note.className = 'hint'; note.textContent = item.error || item.search_note; statusCell.appendChild(note);
-        }
-        tr.appendChild(statusCell);
-        const sources = document.createElement('td'); sources.className = 'links';
-        const sourceUrls = (item.source_urls || []).slice(0, 4);
-        if (sourceUrls.length) {
-          for (const source of sourceUrls) {
-            const a = document.createElement('a'); a.className = 'source'; a.href = source; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = new URL(source).pathname || '/'; a.title = source; sources.appendChild(a);
-          }
-          if ((item.source_urls || []).length > 4) {
-            const extra = document.createElement('span'); extra.className = 'hint'; extra.textContent = `+ ${(item.source_urls || []).length - 4} more`; sources.appendChild(extra);
-          }
-        } else { sources.textContent = '—'; }
-        tr.appendChild(sources);
-        resultsBody.appendChild(tr);
-      }
-      emptyState.hidden = results.length > 0;
-      tableWrap.hidden = results.length === 0;
-    }
-    function updateProgress(job) {
-      const total = job.total || 0; const done = job.completed || 0;
-      progressWrap.style.display = 'block';
-      progressCount.textContent = `${done} / ${total}`;
-      progressBar.style.width = `${total ? Math.round(100 * done / total) : 0}%`;
-      progressLabel.textContent = job.status === 'completed' ? 'Scan complete' : job.status === 'failed' ? 'Scan failed' : job.status === 'queued' ? 'Queued…' : 'Scanning public pages…';
-      summary.textContent = `${done} of ${total} companies processed. ${job.message || ''}`;
-    }
-    async function pollJob(jobId) {
-      try {
-        const response = await fetch(`/api/jobs/${jobId}`);
-        const job = await response.json();
-        if (!response.ok) throw new Error(job.detail || 'Could not load scan status.');
-        updateProgress(job);
-        renderResults(job.results || []);
-        if ((job.results || []).length) {
-          csvLink.href = `/api/jobs/${jobId}/download?format=csv`; csvLink.hidden = false;
-          xlsxLink.href = `/api/jobs/${jobId}/download?format=xlsx`; xlsxLink.hidden = false;
-        }
-        if (job.status === 'completed' || job.status === 'failed') {
-          setBusy(false);
-          if (pollTimer) clearInterval(pollTimer);
-          if (job.status === 'failed') showError(job.message || 'Scan failed.');
-          else showError('');
-          return;
-        }
-      } catch (err) {
-        showError(err.message || 'Failed to check scan progress.');
-        setBusy(false);
-        if (pollTimer) clearInterval(pollTimer);
-      }
-    }
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      showError('');
-      const lines = targets.value.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
-      const file = sheet.files[0];
-      if (!lines.length && !file) { showError('Enter a website/company name or choose a spreadsheet first.'); return; }
-      setBusy(true);
-      csvLink.hidden = true; xlsxLink.hidden = true;
-      resultsBody.replaceChildren(); tableWrap.hidden = true; emptyState.hidden = false;
-      summary.textContent = 'Submitting scan…';
-      progressWrap.style.display = 'block'; progressBar.style.width = '0%'; progressCount.textContent = '0 / 0';
-      const data = new FormData(); data.append('items_json', JSON.stringify(lines)); if (file) data.append('file', file);
-      try {
-        const response = await fetch('/api/jobs', { method: 'POST', body: data });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.detail || 'Could not start scan.');
-        activeJobId = result.id;
-        await pollJob(activeJobId);
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(() => pollJob(activeJobId), 1300);
-      } catch (err) {
-        setBusy(false); showError(err.message || 'Could not start scan.'); summary.textContent = 'Your extracted contacts will appear here.';
+    const tabInstantBtn = document.getElementById('tabInstantBtn');
+    const tabBatchBtn = document.getElementById('tabBatchBtn');
+    const instantView = document.getElementById('instantView');
+    const batchView = document.getElementById('batchView');
+    const searchForm = document.getElementById('searchForm');
+    const instantQuery = document.getElementById('instantQuery');
+    const batchTargets = document.getElementById('batchTargets');
+    const sheetFile = document.getElementById('sheetFile');
+    const dropzone = document.getElementById('fileDropzone');
+    const dropFileName = document.getElementById('dropFileName');
+    const enableJs = document.getElementById('enableJs');
+    const submitBtn = document.getElementById('submitBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const alertBox = document.getElementById('alertBox');
+    const summaryText = document.getElementById('summaryText');
+
+    const statTotal = document.getElementById('statTotal');
+    const statFound = document.getElementById('statFound');
+    const statRate = document.getElementById('statRate');
+    const statJs = document.getElementById('statJs');
+
+    const progressWrap = document.getElementById('progressWrap');
+    const progressStatus = document.getElementById('progressStatus');
+    const progressNumbers = document.getElementById('progressNumbers');
+    const progressBar = document.getElementById('progressBar');
+
+    const tableToolbar = document.getElementById('tableToolbar');
+    const filterInput = document.getElementById('filterInput');
+    const tableWrap = document.getElementById('tableWrap');
+    const resultsTbody = document.getElementById('resultsTbody');
+    const emptyState = document.getElementById('emptyState');
+
+    const csvExportBtn = document.getElementById('csvExportBtn');
+    const xlsxExportBtn = document.getElementById('xlsxExportBtn');
+    const copyAllEmailsBtn = document.getElementById('copyAllEmailsBtn');
+    const copyAllPhonesBtn = document.getElementById('copyAllPhonesBtn');
+    const toast = document.getElementById('toast');
+
+    // Tab Switching
+    tabInstantBtn.addEventListener('click', () => {
+      currentMode = 'instant';
+      tabInstantBtn.classList.add('active');
+      tabBatchBtn.classList.remove('active');
+      instantView.style.display = 'block';
+      batchView.style.display = 'none';
+      instantQuery.focus();
+    });
+
+    tabBatchBtn.addEventListener('click', () => {
+      currentMode = 'batch';
+      tabBatchBtn.classList.add('active');
+      tabInstantBtn.classList.remove('active');
+      batchView.style.display = 'block';
+      instantView.style.display = 'none';
+      batchTargets.focus();
+    });
+
+    // File Drag & Drop
+    sheetFile.addEventListener('change', () => {
+      if (sheetFile.files.length) {
+        dropFileName.textContent = `Selected: ${sheetFile.files[0].name}`;
+        dropFileName.style.display = 'block';
+      } else {
+        dropFileName.style.display = 'none';
       }
     });
+
+    ['dragenter', 'dragover'].forEach(name => {
+      dropzone.addEventListener(name, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropzone.addEventListener(name, (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); });
+    });
+    dropzone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files.length) {
+        sheetFile.files = e.dataTransfer.files;
+        dropFileName.textContent = `Selected: ${e.dataTransfer.files[0].name}`;
+        dropFileName.style.display = 'block';
+      }
+    });
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    function showAlert(msg, isError = true) {
+      if (!msg) {
+        alertBox.style.display = 'none';
+        return;
+      }
+      alertBox.textContent = msg;
+      alertBox.className = `alert-banner ${isError ? 'error' : 'success'}`;
+      alertBox.style.display = 'block';
+    }
+
+    function updateStats(results) {
+      const total = results.length;
+      let found = 0;
+      let jsCount = 0;
+      results.forEach(r => {
+        const hasContacts = (r.emails && r.emails.length > 0) || (r.phones && r.phones.length > 0);
+        if (hasContacts) found++;
+        if (r.js_rendered) jsCount++;
+      });
+      statTotal.textContent = total;
+      statFound.textContent = found;
+      statRate.textContent = total ? Math.round((found / total) * 100) + '%' : '0%';
+      statJs.textContent = jsCount;
+    }
+
+    function copyToClipboard(text, label = 'Copied') {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(label);
+      });
+    }
+
+    function renderTableRows(items) {
+      resultsTbody.innerHTML = '';
+      if (!items.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="5" style="text-align: center; color: var(--text-dim); padding: 30px;">No matching records found.</td>`;
+        resultsTbody.appendChild(tr);
+        return;
+      }
+
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+
+        // 1. Company & Website
+        const tdCompany = document.createElement('td');
+        tdCompany.className = 'company-col';
+        const brandName = item.company || item.site_title || item.website || 'Unknown Entity';
+        const siteUrl = item.website || '#';
+        tdCompany.innerHTML = `
+          <strong>${escapeHtml(brandName)}</strong>
+          ${item.website ? `<a href="${escapeHtml(siteUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(siteUrl)} ↗</a>` : '<span style="color:var(--text-dim)">No website identified</span>'}
+          ${item.site_title && item.site_title !== brandName ? `<div style="font-size:10.5px; color:var(--text-dim); margin-top:3px;">${escapeHtml(item.site_title)}</div>` : ''}
+        `;
+        tr.appendChild(tdCompany);
+
+        // 2. Emails
+        const tdEmails = document.createElement('td');
+        if (item.emails && item.emails.length) {
+          const list = document.createElement('div');
+          list.className = 'contact-list';
+          item.emails.forEach(email => {
+            const wrap = document.createElement('div');
+            wrap.className = 'contact-item';
+            wrap.innerHTML = `
+              <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>
+              <button class="copy-icon-btn" title="Copy email" onclick="navigator.clipboard.writeText('${escapeHtml(email)}'); showToast('Copied email!');">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+            `;
+            list.appendChild(wrap);
+          });
+          tdEmails.appendChild(list);
+        } else {
+          tdEmails.innerHTML = `<span style="color: var(--text-dim);">—</span>`;
+        }
+        tr.appendChild(tdEmails);
+
+        // 3. Phones
+        const tdPhones = document.createElement('td');
+        if (item.phones && item.phones.length) {
+          const list = document.createElement('div');
+          list.className = 'contact-list';
+          item.phones.forEach(phone => {
+            const wrap = document.createElement('div');
+            wrap.className = 'contact-item';
+            wrap.innerHTML = `
+              <a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a>
+              <button class="copy-icon-btn" title="Copy phone" onclick="navigator.clipboard.writeText('${escapeHtml(phone)}'); showToast('Copied phone!');">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+            `;
+            list.appendChild(wrap);
+          });
+          tdPhones.appendChild(list);
+        } else {
+          tdPhones.innerHTML = `<span style="color: var(--text-dim);">—</span>`;
+        }
+        tr.appendChild(tdPhones);
+
+        // 4. Social Profiles
+        const tdSocials = document.createElement('td');
+        const socials = item.socials || {};
+        const platforms = ['linkedin', 'twitter', 'facebook', 'instagram', 'youtube', 'github'];
+        const matched = platforms.filter(p => socials[p]);
+
+        if (matched.length) {
+          const sRow = document.createElement('div');
+          sRow.className = 'social-row';
+          matched.forEach(platform => {
+            const a = document.createElement('a');
+            a.className = 'social-badge';
+            a.href = socials[platform];
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = `${capitalize(platform)} profile`;
+            a.innerHTML = getSocialIconSvg(platform);
+            sRow.appendChild(a);
+          });
+          tdSocials.appendChild(sRow);
+        } else {
+          tdSocials.innerHTML = `<span style="color: var(--text-dim);">—</span>`;
+        }
+        tr.appendChild(tdSocials);
+
+        // 5. Status & Source Info
+        const tdStatus = document.createElement('td');
+        let badgeClass = 'not_found';
+        let badgeLabel = item.status || 'scanned';
+
+        if (item.js_rendered) {
+          badgeClass = 'found_js';
+          badgeLabel = 'Found (JS Fallback)';
+        } else if (item.status === 'found') {
+          badgeClass = 'found';
+          badgeLabel = 'Found';
+        } else if (item.status === 'no_contacts_found') {
+          badgeClass = 'no_contacts';
+          badgeLabel = 'No Contacts';
+        } else if (item.status === 'website_not_found') {
+          badgeClass = 'error';
+          badgeLabel = 'Site Not Found';
+        }
+
+        tdStatus.innerHTML = `
+          <div class="status-badge ${badgeClass}">${escapeHtml(badgeLabel)}</div>
+          ${item.pages_visited ? `<div style="font-size:10.5px; color:var(--text-dim); margin-top:5px;">Pages crawled: ${item.pages_visited}</div>` : ''}
+          ${item.error || item.search_note ? `<div style="font-size:10.5px; color:#f87171; margin-top:3px;">${escapeHtml(item.error || item.search_note)}</div>` : ''}
+        `;
+        tr.appendChild(tdStatus);
+
+        resultsTbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function getSocialIconSvg(platform) {
+      switch(platform) {
+        case 'linkedin':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>`;
+        case 'twitter':
+          return `<svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+        case 'facebook':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>`;
+        case 'instagram':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`;
+        case 'youtube':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>`;
+        case 'github':
+          return `<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>`;
+        default:
+          return `<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+      }
+    }
+
+    // Filter results live
+    filterInput.addEventListener('input', () => {
+      const q = filterInput.value.toLowerCase().trim();
+      if (!q) {
+        renderTableRows(allResults);
+        return;
+      }
+      const filtered = allResults.filter(item => {
+        const comp = (item.company || '').toLowerCase();
+        const site = (item.website || '').toLowerCase();
+        const emails = (item.emails || []).join(' ').toLowerCase();
+        const phones = (item.phones || []).join(' ').toLowerCase();
+        return comp.includes(q) || site.includes(q) || emails.includes(q) || phones.includes(q);
+      });
+      renderTableRows(filtered);
+    });
+
+    // Copy All Emails / Phones
+    copyAllEmailsBtn.addEventListener('click', () => {
+      const emailSet = new Set();
+      allResults.forEach(r => (r.emails || []).forEach(e => emailSet.add(e)));
+      if (!emailSet.size) {
+        showToast('No emails found to copy');
+        return;
+      }
+      copyToClipboard(Array.from(emailSet).join(', '), `Copied ${emailSet.size} unique emails!`);
+    });
+
+    copyAllPhonesBtn.addEventListener('click', () => {
+      const phoneSet = new Set();
+      allResults.forEach(r => (r.phones || []).forEach(p => phoneSet.add(p)));
+      if (!phoneSet.size) {
+        showToast('No phone numbers found to copy');
+        return;
+      }
+      copyToClipboard(Array.from(phoneSet).join(', '), `Copied ${phoneSet.size} unique phone numbers!`);
+    });
+
+    // Handle Form Submit
+    searchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showAlert('');
+
+      const jsEnabled = enableJs.checked;
+
+      // Single Instant Search Mode
+      if (currentMode === 'instant') {
+        const query = instantQuery.value.trim();
+        if (!query) {
+          showAlert('Please enter a company name or website URL.');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Searching…</span>`;
+        summaryText.textContent = `Scanning "${query}" with ${jsEnabled ? 'JS rendering fallback' : 'standard crawl'}…`;
+        progressWrap.style.display = 'block';
+        progressBar.style.width = '50%';
+        progressStatus.textContent = 'Resolving and analyzing pages…';
+        progressNumbers.textContent = '1 / 1';
+
+        try {
+          // For single queries, we can use the batch job or direct API
+          const formData = new FormData();
+          formData.append('items_json', JSON.stringify([query]));
+          formData.append('enable_js', jsEnabled ? 'true' : 'false');
+
+          const resp = await fetch('/api/jobs', { method: 'POST', body: formData });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.detail || 'Failed to start scan.');
+
+          currentJobId = data.id;
+          pollJob(currentJobId);
+          if (pollInterval) clearInterval(pollInterval);
+          pollInterval = setInterval(() => pollJob(currentJobId), 1200);
+        } catch (err) {
+          showAlert(err.message || 'Error executing search.');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<span>Find Contacts</span>`;
+          progressWrap.style.display = 'none';
+        }
+        return;
+      }
+
+      // Batch & File Mode
+      const lines = batchTargets.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const file = sheetFile.files[0];
+
+      if (!lines.length && !file) {
+        showAlert('Please paste company targets or select a spreadsheet file.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>Processing Batch…</span>`;
+      summaryText.textContent = 'Queuing targets and scanning...';
+      progressWrap.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressStatus.textContent = 'Preparing scan queue…';
+      progressNumbers.textContent = '0 / 0';
+
+      const formData = new FormData();
+      formData.append('items_json', JSON.stringify(lines));
+      formData.append('enable_js', jsEnabled ? 'true' : 'false');
+      if (file) formData.append('file', file);
+
+      try {
+        const resp = await fetch('/api/jobs', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to submit batch job.');
+
+        currentJobId = data.id;
+        pollJob(currentJobId);
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => pollJob(currentJobId), 1200);
+      } catch (err) {
+        showAlert(err.message || 'Error submitting batch scan.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Find Contacts</span>`;
+        progressWrap.style.display = 'none';
+      }
+    });
+
+    async function pollJob(jobId) {
+      try {
+        const resp = await fetch(`/api/jobs/${jobId}`);
+        const job = await resp.json();
+        if (!resp.ok) throw new Error(job.detail || 'Could not fetch job status.');
+
+        const total = job.total || 0;
+        const done = job.completed || 0;
+        const pct = total ? Math.round((done / total) * 100) : 0;
+
+        progressBar.style.width = `${pct}%`;
+        progressNumbers.textContent = `${done} / ${total}`;
+        progressStatus.textContent = job.status === 'completed' ? 'Scan Completed' : job.message || 'Scanning pages…';
+        summaryText.textContent = `${done} of ${total} processed. ${job.message || ''}`;
+
+        allResults = job.results || [];
+        updateStats(allResults);
+
+        if (allResults.length > 0) {
+          emptyState.style.display = 'none';
+          tableWrap.style.display = 'block';
+          tableToolbar.style.display = 'flex';
+          renderTableRows(allResults);
+
+          csvExportBtn.href = `/api/jobs/${jobId}/download?format=csv`;
+          csvExportBtn.hidden = false;
+          xlsxExportBtn.href = `/api/jobs/${jobId}/download?format=xlsx`;
+          xlsxExportBtn.hidden = false;
+        }
+
+        if (job.status === 'completed' || job.status === 'failed') {
+          if (pollInterval) clearInterval(pollInterval);
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<span>Find Contacts</span>`;
+          if (job.status === 'failed') {
+            showAlert(job.message || 'Scan job failed.');
+          }
+        }
+      } catch (err) {
+        if (pollInterval) clearInterval(pollInterval);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Find Contacts</span>`;
+        showAlert(err.message || 'Error checking scan progress.');
+      }
+    }
+
     clearBtn.addEventListener('click', () => {
-      targets.value = ''; sheet.value = ''; showError('');
+      instantQuery.value = '';
+      batchTargets.value = '';
+      sheetFile.value = '';
+      dropFileName.style.display = 'none';
+      showAlert('');
+      instantQuery.focus();
     });
   </script>
 </body>

@@ -1,97 +1,123 @@
-# Company Contact Finder
+# Company Contact Finder ⚡ Full Scale
 
-A small local web app to find publicly listed business emails and phone numbers on company websites. It supports direct website URLs, company-name lookup, bulk pasted lists, and CSV/XLSX uploads.
+A powerful, full-scale business contact discovery application designed to extract publicly listed emails, phone numbers, and social profiles directly from company websites. Features automated headless Chromium fallback for JavaScript-rendered Single Page Applications (React, Vue, Next.js), smart column synonym detection for spreadsheets, and instant search via company name OR website domain.
 
-## Features
+---
 
-- Simple HTML frontend served locally by FastAPI.
-- Direct scan by domain/URL or best-effort company-name → official website search.
-- CSV, TSV, TXT, XLSX and XLSM upload; recognizes `Company`/`Company Name` and `Website`/`URL`/`Domain` columns.
-- Scans a limited number of same-host pages, prioritizing contact/about/support pages.
-- Extracts public email addresses, `mailto:` links, telephone links, and likely phone numbers.
-- Job progress, status notes, source pages, and CSV/Excel export.
-- Checks `robots.txt`, uses request timeouts, caps page download size, and rate-limits requests per domain.
+## 🚀 Key Features
 
-## Run on Windows
+- **Search via Name or Website**: Search using just a brand/company name (e.g. `Nike`, `Stripe`) or direct URL (e.g. `drinkprime.in`). If only a name is given, intelligent web search resolves the official website. If only a website is given, the brand name is automatically derived.
+- **Headless JavaScript-Rendered Fallback (Playwright)**: When static scraping detects 0 contacts (common on React, Vue, Next.js, and client-side rendered websites), the engine automatically falls back to headless Chromium with stealth flags, scrolls the page, and extracts dynamically rendered content.
+- **Extensive Column Synonym Matching**: Automatically detects CSV/Excel columns regardless of header variations:
+  - **Company synonyms**: `Brand`, `Brand Name`, `Company`, `Business`, `Organization`, `Agency`, `Firm`, `Client`, `Vendor`, `Store`, `Shop`, `Lead`, `Target`, `Name`, etc.
+  - **Website synonyms**: `URL`, `Website`, `Domain`, `Site`, `Link`, `Homepage`, `Web Address`, `Company URL`, `Online Store`, `Href`, etc.
+  - **Smart Content Detection**: If headers are missing or unusual, column contents are automatically analyzed for domain and URL patterns.
+- **Cloudflare & Obfuscation Decoding**:
+  - Automatically decodes Cloudflare email protection (`/cdn-cgi/l-email-protection#...` and `data-cfemail`).
+  - Decodes obfuscated text emails like `sales [at] domain [dot] com` or `support(at)company.com`.
+  - Decodes HTML entities and obfuscated mailto links.
+- **Social Media Profile Discovery**: Automatically discovers official profiles on LinkedIn, Twitter/X, Facebook, Instagram, YouTube, and GitHub.
+- **Instant Search & Batch Scanning**:
+  - **Instant Search**: Type a single company name or domain for instant discovery.
+  - **Bulk Input**: Paste multi-line lists mixing domains and brand names.
+  - **Spreadsheets**: Drag-and-drop CSV, TSV, TXT, XLSX, and XLSM files up to 25 MB and 2,500 rows.
+- **Real-Time Interactive Dashboard**:
+  - Live progress tracking and metric cards (Total Scanned, Contacts Found, Success Rate, JS Fallbacks Used).
+  - Real-time client-side table search and filtering.
+  - 1-click "Copy All Emails" and "Copy All Phones" buttons.
+  - Export to professionally formatted Excel (`.xlsx`) and CSV.
 
-1. Install Python 3.11 or newer from [python.org](https://www.python.org/downloads/). During install, enable **Add Python to PATH**.
-2. Extract this folder somewhere convenient, then open PowerShell in the folder.
-3. Create and activate a virtual environment:
+---
 
+## 🛠️ Quick Start (Windows)
+
+### Option 1: Automatic Launcher
+Double-click `run_windows.bat`. It will create `.venv`, install all packages, install the Playwright Chromium browser, and open the app in your default browser at `http://127.0.0.1:8000`.
+
+### Option 2: PowerShell Manual Run
+
+1. Open PowerShell in this directory:
    ```powershell
-   py -m venv .venv
+   py -3 -m venv .venv
    .\.venv\Scripts\Activate.ps1
    ```
-
-   If PowerShell blocks activation, use this command just for the current terminal, or run the app with `.\.venv\Scripts\python.exe` directly:
-
-   ```powershell
-   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   .\.venv\Scripts\Activate.ps1
-   ```
-
-4. Install packages:
-
+2. Install Python dependencies:
    ```powershell
    python -m pip install --upgrade pip
    pip install -r requirements.txt
    ```
-
-5. Start the app:
-
+3. Install Playwright browser:
+   ```powershell
+   python -m playwright install chromium
+   ```
+4. Start the server:
    ```powershell
    python -m uvicorn app:app --host 127.0.0.1 --port 8000
    ```
+5. Open your browser at **http://127.0.0.1:8000**.
 
-6. Open **http://127.0.0.1:8000** in your browser. Keep the terminal open while using it. Press `Ctrl+C` to stop.
+---
 
-## Input examples
+## 🐳 Docker Run
 
-Paste a URL or company name, one per line:
+Build and run using Docker:
+```bash
+docker build -t company-contact-finder .
+docker run -p 8000:8000 company-contact-finder
+```
 
+---
+
+## 📋 Input & File Support
+
+### 1. Single Input
+Search instantly with either:
+- A company name: `OpenAI`
+- A domain: `drinkprime.in`
+- A full URL: `https://stripe.com`
+
+### 2. Multi-line Text Paste
+Paste mixed entries directly into the bulk textarea:
 ```text
-https://example.org
+https://stripe.com
 DrinkPrime
-A company with spaces
+Nike
+airbnb.com
 ```
 
-For a spreadsheet, a useful format is:
+### 3. Spreadsheets (CSV, TSV, XLSX, XLSM)
+The parser automatically detects varied column naming conventions. Example supported layouts:
 
-| Company | Website |
+| Brand Name | URL |
 |---|---|
-| Example Org | https://example.org |
 | DrinkPrime | https://drinkprime.in |
-| Another Brand | |
+| Razorpay | |
+| | https://stripe.com |
+| Anthropic | https://anthropic.com |
 
-A website URL is preferred. When only a company name is provided, the app uses public search results to guess its official website. That match may be wrong for ambiguous names; inspect the result before use. The default DDGS search can be rate-limited. For more reliable name lookups, optionally set a Brave Search API key in your environment before launching the app:
+Or single-column target lists:
 
-```powershell
-$env:BRAVE_SEARCH_API_KEY="YOUR_KEY"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
+| Targets |
+|---|
+| stripe.com |
+| OpenAI |
+| https://github.com |
 
-Use the API key according to your provider's terms. The app does not require a search API key when scanning URLs directly.
+---
 
-## Result status meanings
+## 📊 Result Status Badges
 
-- `found`: one or more email addresses or phone numbers were detected.
-- `no_contacts_found`: pages loaded, but no contact values were detected.
-- `no_pages_scanned`: no pages could be scanned (may be robots restrictions, timeouts, or site blocking).
-- `website_not_found`: a company name did not resolve to a likely website.
-- `invalid_url` / `error`: input or request issue; see Notes.
+- `Found`: Public email addresses or phone numbers discovered via static crawl.
+- `Found (JS Fallback)`: Discovered using headless Chromium rendering when static crawl returned empty.
+- `No Contacts`: Pages successfully crawled, but no public business contact details were listed.
+- `Site Not Found`: Company name could not be resolved to an official website domain.
+- `Error`: Request or timeout error.
 
-## Important limitations
+---
 
-- This is a best-effort public webpage parser, not a paid contact database. Some sites hide details behind JavaScript, render them only after interaction, use images, or block automated requests; such contacts may not be detected.
-- Company-name lookups can select an incorrect or unofficial domain. Verify the domain and source URLs before using results.
-- It deliberately does not bypass logins, captchas, robots restrictions, or access controls. It scans up to seven pages per site and limits page size and request frequency.
-- Use contact details only for relevant, lawful business communication. Follow applicable privacy/anti-spam laws and honor opt-outs.
-- Job history is kept in memory while the app runs; restarting the app clears jobs/results.
+## ⚖️ Responsible Crawling & Privacy
 
-## Project files
-
-- `app.py`: FastAPI endpoints, spreadsheet parsing, jobs, exports.
-- `scraper.py`: polite website crawler and public contact extractor.
-- `static/index.html`: frontend UI.
-- `requirements.txt`: Python dependencies.
-- `.env.example`: optional search-provider environment setting.
+- Scans a bounded number of public pages per domain (prioritizing contact, about, and support pages).
+- Respects `robots.txt` directives.
+- Implements polite domain-level rate limiting and request timeouts.
+- Designed strictly for lawful, legitimate business discovery and research. Always comply with relevant privacy, anti-spam, and data protection regulations.

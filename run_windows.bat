@@ -21,6 +21,8 @@ echo Installing or checking dependencies...
 if errorlevel 1 goto :failed
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt
 if errorlevel 1 goto :failed
+".venv\Scripts\python.exe" -m playwright install chromium
+if errorlevel 1 goto :failed
 
 echo Starting local server at http://127.0.0.1:8000
 start "" /B cmd /c "timeout /t 3 /nobreak >nul & start http://127.0.0.1:8000"
