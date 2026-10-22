@@ -204,32 +204,76 @@ def _valid_email(email: str) -> bool:
     user, _, domain = email.partition("@")
     if not user or not domain or "." not in domain:
         return False
+    # Reject font/image files with @ (e.g. logo@2x.png, icon@3x.jpg)
+    if any(ext in email for ext in (".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".ico", ".woff", ".ttf", ".css", ".js")):
+        return False
+    # Reject dummy / template emails
+    dummy_names = ("yourname", "your.name", "firstname.lastname", "username", "name", "email", "user", "john.doe", "sample", "test")
+    if user in dummy_names:
+        return False
     if any(part in email for part in SKIP_EMAIL_PARTS):
         return False
-    if domain.endswith(SKIP_EXTENSIONS):
-        return False
+    # Check TLD
     tld = domain.rsplit(".", 1)[-1]
     if len(tld) < 2 or not tld.isalpha():
         return False
     return True
 
 
+DATE_PATTERNS = (
+    re.compile(r"(?:19|20)\d{2}[-/.]\d{1,2}[-/.]\d{1,2}"),           # ISO dates: 2021-06-29, 2021/06/29, 2021.06.29
+    re.compile(r"\b\d{1,2}[-/.]\d{1,2}[-/.]\d{4}\b"),               # EU/US dates: 29-06-2021, 06/29/2021
+    re.compile(r"\b(?:19|20)\d{2}[-/.]\d{1,2}\b"),                   # Year-month: 2021-06, 2024.11
+    re.compile(r"\b(?:19|20)\d{2}\s*[-–—]\s*(?:19|20)?\d{2}\b"),     # Year range: 2020-2024
+    re.compile(r"\b\d{5}[-–]\d{4}\b"),                               # US Zip+4: 90210-1234
+    re.compile(r"\d+\s*x\s*\d+"),                                    # Dimensions e.g. 1920x1080
+    re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"),           # IP address: 127.0.0.1
+    re.compile(r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b", re.IGNORECASE),
+)
+
+
 def _clean_phone(raw: str) -> str | None:
     raw = raw.strip()
+    if not raw:
+        return None
+
+    # 1. Reject date patterns like 2021-06-29 immediately
+    for pat in DATE_PATTERNS:
+        if pat.search(raw):
+            return None
+
+    # 2. Reject strings with alphabetical characters (unless explicit phone extension)
+    if re.search(r"[a-zA-Z]", raw) and not re.search(r"(?i)\b(?:ext|x)\.?\s*\d+", raw):
+        return None
+
     digits = re.sub(r"\D", "", raw)
-    if not (8 <= len(digits) <= 15):
+    # 3. Phone number length validation:
+    # If starting with '+', allow 8-15 digits (ITU-T E.164)
+    # If no '+', local numbers must have 10-14 digits (avoids 8-digit dates like 20210629, order IDs, or shortcodes)
+    if raw.startswith("+"):
+        if not (8 <= len(digits) <= 15):
+            return None
+    else:
+        if not (10 <= len(digits) <= 14):
+            return None
+
+    # 4. Reject repetitive or dummy digits like 0000000000, 1111111111
+    if len(set(digits)) <= 3:
         return None
-    if len(set(digits)) <= 2:
+
+    # 5. Reject sequential digits
+    if digits in ("1234567890", "0123456789", "9876543210", "01234567890", "0987654321"):
         return None
-    # Reject range/schedule patterns like "0-2 2-4 4-6" or excessive hyphenation
-    if re.search(r"\d+-\d+\s+\d+-\d+", raw) or raw.count("-") >= 4:
+
+    # 6. Reject schedule ranges, time patterns or multi-hyphen strings (e.g. "0-2 2-4 4-6", "10:00 - 18:00")
+    if re.search(r"\d+-\d+\s+\d+-\d+", raw) or raw.count("-") >= 4 or ":" in raw:
         return None
-    # Reject date ranges like 2020-2024
-    if re.search(r"20[0-2]\d[-–—]20[0-3]\d", raw):
-        return None
+
+    # 7. Reject fragmented strings with too many short number fragments
     segments = re.findall(r"\d+", raw)
     if len(segments) >= 4 and all(len(s) <= 2 for s in segments):
         return None
+
     cleaned = re.sub(r"\s+", " ", raw).strip(" .-()")
     return cleaned
 
@@ -238,9 +282,12 @@ def canonicalize_phones(phones: set[str] | list[str]) -> list[str]:
     """Group and canonicalize phone numbers, keeping the cleanest and best formatted version."""
     cleaned: list[tuple[int, str, str]] = []
     for p in phones:
-        d = re.sub(r"\D", "", p)
+        c = _clean_phone(p)
+        if not c:
+            continue
+        d = re.sub(r"\D", "", c)
         if 8 <= len(d) <= 15:
-            cleaned.append((len(d), p, d))
+            cleaned.append((len(d), c, d))
 
     cleaned.sort(key=lambda x: (x[0], -len(x[1])))
     final_phones: list[str] = []
@@ -756,8 +803,13 @@ def scrape_website(
             status = "found (web_search)"
         else:
             status = "found"
+        error_msg = ""
     else:
         status = "no_contacts_found" if visited else "no_pages_scanned"
+        error_msg = (
+            "No public business contacts found after 4-layer scan (Static Crawl, Headless JS Render, Security Standards, & Web Search)."
+            if visited else (first_error or "Unable to scan target domain.")
+        )
 
     return {
         "website": cleaned_url,
@@ -768,6 +820,6 @@ def scrape_website(
         "pages_visited": len(visited),
         "source_urls": visited,
         "status": status,
-        "error": first_error if not visited and not emails and not phones else "",
+        "error": error_msg,
         "js_rendered": js_rendered,
     }

@@ -547,6 +547,118 @@
       transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    /* 4-Step Searching Indicator & Animated Ticker */
+    .steps-flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      gap: 6px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-tertiary);
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+
+    .step-circle {
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1.5px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9.5px;
+      font-weight: 900;
+      color: var(--text-tertiary);
+      transition: all 0.25s ease;
+    }
+
+    .step-item.active {
+      color: #000000;
+    }
+
+    .step-item.active .step-circle {
+      background: #000000;
+      border-color: #000000;
+      color: #ffffff;
+      animation: applePulse 1.8s infinite;
+    }
+
+    .step-item.completed {
+      color: #000000;
+    }
+
+    .step-item.completed .step-circle {
+      background: #000000;
+      border-color: #000000;
+      color: #ffffff;
+    }
+
+    .step-line {
+      flex: 1;
+      height: 1.5px;
+      background: #e5e5ea;
+      transition: background 0.3s ease;
+      min-width: 10px;
+    }
+
+    .step-line.active {
+      background: #000000;
+    }
+
+    @keyframes applePulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.3); }
+      70% { box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+    }
+
+    .live-ticker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .ticker-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #000000;
+      animation: appleDotPulse 1.4s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes appleDotPulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .ticker-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: opacity 0.25s ease;
+    }
+
     /* Minimalist Black & White Table */
     .table-wrap {
       overflow-x: auto;
@@ -981,7 +1093,7 @@
 
         <div class="alert-banner" id="alertBox"></div>
 
-        <!-- Progress Tracker -->
+        <!-- Progress Tracker & 4-Step Searching Indicator -->
         <div class="progress-box" id="progressWrap">
           <div class="progress-header">
             <span id="progressStatus">Scanning targets…</span>
@@ -989,6 +1101,35 @@
           </div>
           <div class="progress-track">
             <div class="progress-fill" id="progressBar"></div>
+          </div>
+
+          <!-- Apple 4-Step Flow -->
+          <div class="steps-flow" id="stepsFlow">
+            <div class="step-item active" id="stepItem1">
+              <span class="step-circle">1</span>
+              <span>Static Crawl</span>
+            </div>
+            <div class="step-line" id="stepLine1"></div>
+            <div class="step-item" id="stepItem2">
+              <span class="step-circle">2</span>
+              <span>Headless JS</span>
+            </div>
+            <div class="step-line" id="stepLine2"></div>
+            <div class="step-item" id="stepItem3">
+              <span class="step-circle">3</span>
+              <span>Security Protocols</span>
+            </div>
+            <div class="step-line" id="stepLine3"></div>
+            <div class="step-item" id="stepItem4">
+              <span class="step-circle">4</span>
+              <span>Web Search</span>
+            </div>
+          </div>
+
+          <!-- Engaging Live Ticker -->
+          <div class="live-ticker" id="liveTicker">
+            <span class="ticker-pulse"></span>
+            <span class="ticker-text" id="tickerText">Initializing multi-layer discovery pipeline…</span>
           </div>
         </div>
 
@@ -1081,6 +1222,9 @@
     const copyAllEmailsBtn = document.getElementById('copyAllEmailsBtn');
     const copyAllPhonesBtn = document.getElementById('copyAllPhonesBtn');
     const toast = document.getElementById('toast');
+    const stepsFlow = document.getElementById('stepsFlow');
+    const liveTicker = document.getElementById('liveTicker');
+    const tickerText = document.getElementById('tickerText');
 
     // Tab Switching
     tabInstantBtn.addEventListener('click', () => {
@@ -1262,12 +1406,15 @@
         if (item.js_rendered) {
           badgeClass = 'found_js';
           badgeLabel = 'Found (JS Fallback)';
+        } else if (item.status === 'found (web_search)') {
+          badgeClass = 'found';
+          badgeLabel = 'Found (Web Search)';
         } else if (item.status === 'found') {
           badgeClass = 'found';
           badgeLabel = 'Found';
         } else if (item.status === 'no_contacts_found') {
           badgeClass = 'no_contacts';
-          badgeLabel = 'No Contacts';
+          badgeLabel = 'No Contacts (4 Steps Checked)';
         } else if (item.status === 'website_not_found') {
           badgeClass = 'error';
           badgeLabel = 'Site Not Found';
@@ -1276,7 +1423,7 @@
         tdStatus.innerHTML = `
           <div class="status-badge ${badgeClass}">${escapeHtml(badgeLabel)}</div>
           ${item.pages_visited ? `<div style="font-size:11px; color:var(--text-tertiary); font-weight:600; margin-top:5px;">Pages crawled: ${item.pages_visited}</div>` : ''}
-          ${item.error || item.search_note ? `<div style="font-size:11px; color:#6e6e73; font-weight:600; margin-top:3px;">${escapeHtml(item.error || item.search_note)}</div>` : ''}
+          ${item.error || item.search_note ? `<div style="font-size:11px; color:#5c5c60; font-weight:600; margin-top:4px; line-height:1.4;">${escapeHtml(item.error || item.search_note)}</div>` : ''}
         `;
         tr.appendChild(tdStatus);
 
@@ -1350,6 +1497,125 @@
       copyToClipboard(Array.from(phoneSet).join(', '), `Copied ${phoneSet.size} unique phone numbers`);
     });
 
+    // 4-Step Animated Search & Engaging Ticker Controller
+    let tickerInterval = null;
+    let stepTimer = null;
+    let currentStepIndex = 1;
+    let searchStartTime = 0;
+
+    const SEARCH_TICKER_MESSAGES = [
+      "Step 1/4: Crawling root homepage & priority contact routes...",
+      "Step 1/4: Parsing HTML headers, footers & mailto endpoints...",
+      "Step 2/4: Launching headless browser to execute dynamic scripts...",
+      "Step 2/4: Simulating viewport & discovering obfuscated elements...",
+      "Step 3/4: Checking RFC 9116 security.txt & vulnerability disclosures...",
+      "Step 3/4: Verifying phone number formats & rejecting date strings...",
+      "Step 4/4: Scanning external search directories for official channels...",
+      "Step 4/4: Cross-referencing verified business emails and phones...",
+    ];
+
+    function setStepState(stepNum) {
+      currentStepIndex = stepNum;
+      for (let i = 1; i <= 4; i++) {
+        const item = document.getElementById(`stepItem${i}`);
+        const circle = item ? item.querySelector('.step-circle') : null;
+        if (!item || !circle) continue;
+
+        if (i < stepNum) {
+          item.className = 'step-item completed';
+          circle.textContent = '\u2713';
+        } else if (i === stepNum) {
+          item.className = 'step-item active';
+          circle.textContent = String(i);
+        } else {
+          item.className = 'step-item';
+          circle.textContent = String(i);
+        }
+      }
+
+      for (let l = 1; l <= 3; l++) {
+        const line = document.getElementById(`stepLine${l}`);
+        if (line) {
+          if (l < stepNum) {
+            line.classList.add('active');
+          } else {
+            line.classList.remove('active');
+          }
+        }
+      }
+    }
+
+    function setTickerText(msg) {
+      if (!tickerText) return;
+      tickerText.style.opacity = '0';
+      setTimeout(() => {
+        tickerText.textContent = msg;
+        tickerText.style.opacity = '1';
+      }, 200);
+    }
+
+    function startSearchingAnimation(targetLabel = '') {
+      if (tickerInterval) clearInterval(tickerInterval);
+      if (stepTimer) clearInterval(stepTimer);
+
+      searchStartTime = Date.now();
+      setStepState(1);
+
+      let msgIdx = 0;
+      setTickerText(`Step 1/4: Initializing multi-layer discovery pipeline for ${targetLabel || 'target'}…`);
+
+      tickerInterval = setInterval(() => {
+        msgIdx = (msgIdx + 1) % SEARCH_TICKER_MESSAGES.length;
+        setTickerText(SEARCH_TICKER_MESSAGES[msgIdx]);
+      }, 2400);
+
+      stepTimer = setInterval(() => {
+        const elapsed = (Date.now() - searchStartTime) / 1000;
+        if (elapsed >= 12) {
+          setStepState(4);
+        } else if (elapsed >= 7) {
+          setStepState(3);
+        } else if (elapsed >= 3) {
+          setStepState(2);
+        } else {
+          setStepState(1);
+        }
+      }, 400);
+    }
+
+    function stopSearchingAnimation(success = true, results = []) {
+      if (tickerInterval) {
+        clearInterval(tickerInterval);
+        tickerInterval = null;
+      }
+      if (stepTimer) {
+        clearInterval(stepTimer);
+        stepTimer = null;
+      }
+
+      if (success) {
+        for (let i = 1; i <= 4; i++) {
+          const item = document.getElementById(`stepItem${i}`);
+          const circle = item ? item.querySelector('.step-circle') : null;
+          if (item) item.className = 'step-item completed';
+          if (circle) circle.textContent = '\u2713';
+        }
+        for (let l = 1; l <= 3; l++) {
+          const line = document.getElementById(`stepLine${l}`);
+          if (line) line.classList.add('active');
+        }
+
+        const anyContacts = results.some(r => (r.emails && r.emails.length) || (r.phones && r.phones.length));
+        if (anyContacts) {
+          setTickerText('\u2713 4-step scan completed. Discovered verified contacts displayed below.');
+        } else {
+          setTickerText('4-step scan completed. No verified business contacts found after 4-layer scan.');
+        }
+      } else {
+        setTickerText('Scan interrupted. Check connection and retry.');
+      }
+    }
+
     // Form Submit
     searchForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1369,9 +1635,10 @@
         submitBtn.innerHTML = `<span>Searching…</span>`;
         summaryText.textContent = `Scanning "${query}"…`;
         progressWrap.style.display = 'block';
-        progressBar.style.width = '50%';
+        progressBar.style.width = '45%';
         progressStatus.textContent = 'Resolving and analyzing pages…';
         progressNumbers.textContent = '1 / 1';
+        startSearchingAnimation(query);
 
         try {
           const formData = new FormData();
@@ -1387,6 +1654,7 @@
           if (pollInterval) clearInterval(pollInterval);
           pollInterval = setInterval(() => pollJob(currentJobId), 1200);
         } catch (err) {
+          stopSearchingAnimation(false);
           showAlert(err.message || 'Error executing search.');
           submitBtn.disabled = false;
           submitBtn.innerHTML = `<span>Find Contacts</span>`;
@@ -1411,6 +1679,7 @@
       progressBar.style.width = '0%';
       progressStatus.textContent = 'Preparing scan queue…';
       progressNumbers.textContent = '0 / 0';
+      startSearchingAnimation(lines.length ? `${lines.length} companies` : (file ? file.name : 'batch'));
 
       const formData = new FormData();
       formData.append('items_json', JSON.stringify(lines));
@@ -1427,6 +1696,7 @@
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(() => pollJob(currentJobId), 1200);
       } catch (err) {
+        stopSearchingAnimation(false);
         showAlert(err.message || 'Error submitting batch scan.');
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<span>Find Contacts</span>`;
@@ -1468,12 +1738,14 @@
           if (pollInterval) clearInterval(pollInterval);
           submitBtn.disabled = false;
           submitBtn.innerHTML = `<span>Find Contacts</span>`;
+          stopSearchingAnimation(job.status === 'completed', allResults);
           if (job.status === 'failed') {
             showAlert(job.message || 'Scan job failed.');
           }
         }
       } catch (err) {
         if (pollInterval) clearInterval(pollInterval);
+        stopSearchingAnimation(false);
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<span>Find Contacts</span>`;
         showAlert(err.message || 'Error checking scan progress.');
@@ -1486,6 +1758,8 @@
       sheetFile.value = '';
       dropFileName.style.display = 'none';
       showAlert('');
+      stopSearchingAnimation(false);
+      progressWrap.style.display = 'none';
       instantQuery.focus();
     });
   </script>
