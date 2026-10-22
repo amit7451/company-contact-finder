@@ -13,7 +13,8 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+import httpx
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from openpyxl import Workbook, load_workbook
@@ -725,3 +726,139 @@ def download_job(job_id: str, format: str = "csv"):
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="company-contacts-{job_id}.csv"'},
     )
+
+
+def load_env_vars():
+    env_file = os.path.join(APP_DIR, ".env")
+    if os.path.exists(env_file):
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k, v = k.strip(), v.strip().strip('"').strip("'")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+
+load_env_vars()
+
+
+def sanitize_ai_domain(raw_domain: str) -> str:
+    d = str(raw_domain).strip().lower()
+    d = re.sub(r"^https?://", "", d)
+    d = re.sub(r"^www\.", "", d)
+    d = d.split("/")[0].split("?")[0].split("#")[0].strip()
+    return d
+
+
+@app.post("/api/ai/companies")
+async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
+    """
+    AI Scout company discovery endpoint powered by OpenRouter.
+    Strictly discovers companies & root domain URLs based on user query and requested count (10, 20, or 50).
+    """
+    user_prompt = str(payload.get("prompt", "")).strip()
+    if not user_prompt:
+        raise HTTPException(status_code=400, detail="Prompt is required.")
+
+    # Clamp count to supported drop-down values: 10, 20, 50 (max 50)
+    try:
+        raw_count = int(payload.get("count", 10))
+    except (TypeError, ValueError):
+        raw_count = 10
+
+    if raw_count <= 10:
+        count = 10
+    elif raw_count <= 25:
+        count = 20
+    else:
+        count = 50
+
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        load_env_vars()
+        api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="OPENROUTER_API_KEY is not configured in environment or .env file.",
+        )
+
+    system_prompt = (
+        "You are an AI Company Scout specialized strictly in finding companies and their official website domains.\n"
+        "Guidelines:\n"
+        "1. If the user greeting is a simple hello/hi/hey, reply with a brief, friendly 1-sentence greeting and ask what industry, niche, or location of companies they want to find. Set companies to [].\n"
+        "2. If the user asks about anything unrelated to finding companies or their websites, politely reply: 'I can only help you discover companies and their official website domains.' and set companies to [].\n"
+        f"3. When the user asks for companies, discover up to exactly {count} relevant, verified companies and return their official website root domains (e.g. stripe.com, klarna.com, adyen.com).\n"
+        "4. You MUST ALWAYS respond in valid JSON with this exact schema:\n"
+        "{\n"
+        '  "reply": "<Short friendly 1-2 sentence explanation of what was found or greeting>",\n'
+        '  "companies": ["domain1.com", "domain2.com", ...]\n'
+        "}\n"
+        "Do NOT include markdown formatting or backticks around the JSON. Output raw JSON only.\n"
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    history = payload.get("history", [])
+    if isinstance(history, list):
+        for msg in history[-4:]:
+            role = msg.get("role")
+            content = msg.get("content")
+            if role in ["user", "assistant"] and content:
+                messages.append({"role": role, "content": str(content)[:300]})
+
+    messages.append({"role": "user", "content": f"{user_prompt} (Target Count: {count} companies)"})
+
+    openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:8000",
+        "X-Title": "Company Contact Finder",
+    }
+
+    models_to_try = ["openai/gpt-4o-mini", "deepseek/deepseek-chat"]
+    last_error = None
+
+    for model in models_to_try:
+        req_payload = {
+            "model": model,
+            "messages": messages,
+            "response_format": {"type": "json_object"},
+            "temperature": 0.2,
+            "max_tokens": 1200,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=25.0) as client:
+                resp = await client.post(openrouter_url, headers=headers, json=req_payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+                parsed = json.loads(content)
+                raw_companies = parsed.get("companies", [])
+                cleaned_companies: list[str] = []
+                seen = set()
+                for c in raw_companies:
+                    dom = sanitize_ai_domain(c)
+                    if dom and "." in dom and dom not in seen:
+                        seen.add(dom)
+                        cleaned_companies.append(dom)
+                return {
+                    "reply": parsed.get("reply", "Here are the companies found:"),
+                    "companies": cleaned_companies[:count],
+                    "count": len(cleaned_companies[:count]),
+                }
+            else:
+                last_error = f"OpenRouter returned {resp.status_code}: {resp.text[:120]}"
+                logger.warning(f"Model {model} failed: {last_error}")
+        except Exception as exc:
+            last_error = str(exc)
+            logger.warning(f"Error querying {model}: {exc}")
+
+    raise HTTPException(status_code=502, detail=f"AI service error: {last_error}")
+

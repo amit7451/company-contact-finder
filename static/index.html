@@ -1248,13 +1248,372 @@
       flex-wrap: wrap;
     }
 
-    /* Footer */
-    footer {
-      margin-top: 50px;
-      text-align: center;
-      font-size: 12px;
+    /* Targets Header Row with AI Auto-fill Pill */
+    .targets-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .targets-header-row .form-label {
+      margin-bottom: 0;
+    }
+
+    .ai-inline-badge-btn {
+      font-size: 11px;
+      font-weight: 700;
+      color: #000000;
+      background: #f2f2f7;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: inherit;
+    }
+
+    .ai-inline-badge-btn:hover {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+      transform: translateY(-1px);
+    }
+
+    /* Floating AI Scout Launcher */
+    .ai-launcher-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #000000;
+      color: #ffffff;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1000;
+    }
+
+    .ai-launcher-btn:hover {
+      transform: scale(1.04) translateY(-2px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    .ai-launcher-btn:active {
+      transform: scale(0.97);
+    }
+
+    .ai-launcher-icon {
+      font-size: 14px;
+    }
+
+    /* AI Scout Chat Card */
+    .ai-chat-card {
+      position: fixed;
+      bottom: 76px;
+      right: 24px;
+      width: 380px;
+      max-width: calc(100vw - 32px);
+      height: 520px;
+      max-height: calc(100vh - 100px);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 1001;
+      animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .ai-chat-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.85);
+    }
+
+    .ai-chat-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ai-chat-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #000000;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .ai-chat-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .ai-chat-subtitle {
+      font-size: 10.5px;
       font-weight: 600;
-      color: var(--text-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .ai-chat-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-count-box {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #f2f2f7;
+      padding: 3px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .ai-count-box label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .ai-select {
+      background: transparent;
+      border: none;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-primary);
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .ai-chat-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .ai-chat-close:hover {
+      background: #f2f2f7;
+      color: var(--text-primary);
+    }
+
+    .ai-chat-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ai-bubble {
+      padding: 10px 14px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      word-break: break-word;
+      animation: modalFadeIn 0.2s ease forwards;
+    }
+
+    .ai-bubble-user {
+      align-self: flex-end;
+      background: #000000;
+      color: #ffffff;
+      border-radius: 16px 16px 4px 16px;
+      max-width: 82%;
+      font-weight: 500;
+    }
+
+    .ai-bubble-assistant {
+      align-self: flex-start;
+      background: #f2f2f7;
+      color: var(--text-primary);
+      border-radius: 16px 16px 16px 4px;
+      max-width: 88%;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+      font-weight: 500;
+    }
+
+    .ai-bubble-assistant em {
+      font-style: italic;
+      color: #000000;
+      font-weight: 600;
+    }
+
+    .ai-feed-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid var(--border-strong);
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .ai-domain-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+      max-height: 110px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .ai-domain-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      font-weight: 600;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: #1c1c1e;
+    }
+
+    .ai-chips-row {
+      display: flex;
+      gap: 6px;
+      padding: 8px 14px 6px;
+      overflow-x: auto;
+      background: rgba(255, 255, 255, 0.6);
+      border-top: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .ai-chip {
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f2f2f7;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 4px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .ai-chip:hover {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+    }
+
+    .ai-chat-input-bar {
+      padding: 10px 14px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+    }
+
+    .ai-input {
+      flex: 1;
+      height: 38px;
+      padding: 0 14px;
+      font-size: 13px;
+      font-family: inherit;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: #fafafc;
+      outline: none;
+      color: var(--text-primary);
+      transition: all 0.15s ease;
+    }
+
+    .ai-input:focus {
+      background: #ffffff;
+      border-color: #000000;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .ai-send-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #000000;
+      color: #ffffff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .ai-send-btn:hover:not(:disabled) {
+      transform: scale(1.05);
+      background: #2c2c2e;
+    }
+
+    .ai-send-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .ai-typing-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+    }
+
+    .ai-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--text-tertiary);
+      border-radius: 50%;
+      animation: aiPulse 1s infinite alternate;
+    }
+    .ai-dot:nth-child(2) { animation-delay: 0.2s; }
+    .ai-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes aiPulse {
+      0% { opacity: 0.3; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1.2); }
     }
 
     @media (max-width: 980px) {
@@ -1311,7 +1670,12 @@
           <!-- Batch & File Upload View -->
           <div id="batchView" style="display: none;">
             <div class="form-group">
-              <label class="form-label" for="batchTargets">Targets</label>
+              <div class="targets-header-row">
+                <label class="form-label" for="batchTargets">Targets</label>
+                <button type="button" class="ai-inline-badge-btn" id="openAiScoutFromBatchBtn" title="Ask AI Scout to populate company targets">
+                  <span>✨</span> Auto-fill with AI Scout
+                </button>
+              </div>
               <textarea 
                 id="batchTargets" 
                 class="input-field" 
@@ -1528,6 +1892,68 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Apple Floating AI Scout Launcher -->
+  <button type="button" class="ai-launcher-btn" id="aiLauncherBtn" title="Discover companies with AI Scout">
+    <span class="ai-launcher-icon">✨</span>
+    <span>AI Scout</span>
+  </button>
+
+  <!-- Apple AI Scout Chat Card / Popover -->
+  <div class="ai-chat-card" id="aiChatCard" style="display: none;">
+    <div class="ai-chat-header">
+      <div class="ai-chat-title-group">
+        <div class="ai-chat-icon">✨</div>
+        <div>
+          <div class="ai-chat-title">AI Scout</div>
+          <div class="ai-chat-subtitle">Direct Target Feeder</div>
+        </div>
+      </div>
+      <div class="ai-chat-header-actions">
+        <div class="ai-count-box">
+          <label for="aiCountSelect">Count</label>
+          <select id="aiCountSelect" class="ai-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <button type="button" class="ai-chat-close" id="aiChatCloseBtn" aria-label="Close AI Scout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages Stream -->
+    <div class="ai-chat-body" id="aiChatBody">
+      <div class="ai-bubble ai-bubble-assistant">
+        Hello! Tell me what type of companies you want to discover (e.g. <em>"AI robotics startups"</em>, <em>"B2B SaaS in Europe"</em>, or <em>"athletic apparel brands"</em>).
+        I'll find their website URLs and feed them directly into your Targets.
+      </div>
+    </div>
+
+    <!-- Suggestion Chips -->
+    <div class="ai-chips-row">
+      <button type="button" class="ai-chip" data-prompt="Top AI startups & research labs">AI Startups</button>
+      <button type="button" class="ai-chip" data-prompt="Top B2B SaaS companies">B2B SaaS</button>
+      <button type="button" class="ai-chip" data-prompt="Fintech payment platforms">Fintech</button>
+      <button type="button" class="ai-chip" data-prompt="Sustainable D2C fashion brands">D2C Brands</button>
+    </div>
+
+    <!-- Input Bar -->
+    <form class="ai-chat-input-bar" id="aiChatForm">
+      <input 
+        type="text" 
+        id="aiChatInput" 
+        class="ai-input" 
+        placeholder="What companies do you need?" 
+        autocomplete="off"
+      />
+      <button type="submit" class="ai-send-btn" id="aiSendBtn" aria-label="Send">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+      </button>
+    </form>
   </div>
 
   <div class="toast" id="toast">Copied to clipboard</div>
@@ -2363,6 +2789,170 @@
       emptyState.style.display = 'block';
       instantQuery.focus();
     });
+
+    // ----------------------------------------------------
+    // Apple AI Scout Chatbot Controller
+    // ----------------------------------------------------
+    const aiLauncherBtn = document.getElementById('aiLauncherBtn');
+    const aiChatCard = document.getElementById('aiChatCard');
+    const aiChatCloseBtn = document.getElementById('aiChatCloseBtn');
+    const openAiScoutFromBatchBtn = document.getElementById('openAiScoutFromBatchBtn');
+    const aiChatForm = document.getElementById('aiChatForm');
+    const aiChatInput = document.getElementById('aiChatInput');
+    const aiSendBtn = document.getElementById('aiSendBtn');
+    const aiChatBody = document.getElementById('aiChatBody');
+    const aiCountSelect = document.getElementById('aiCountSelect');
+    const aiChips = document.querySelectorAll('.ai-chip');
+
+    let aiChatHistory = [];
+
+    function toggleAiChat(open) {
+      if (open === undefined) {
+        open = aiChatCard.style.display === 'none';
+      }
+      if (open) {
+        aiChatCard.style.display = 'flex';
+        setTimeout(() => aiChatInput.focus(), 60);
+      } else {
+        aiChatCard.style.display = 'none';
+      }
+    }
+
+    if (aiLauncherBtn) aiLauncherBtn.addEventListener('click', () => toggleAiChat());
+    if (aiChatCloseBtn) aiChatCloseBtn.addEventListener('click', () => toggleAiChat(false));
+    if (openAiScoutFromBatchBtn) {
+      openAiScoutFromBatchBtn.addEventListener('click', () => {
+        toggleAiChat(true);
+      });
+    }
+
+    aiChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const prompt = chip.getAttribute('data-prompt');
+        if (prompt) {
+          aiChatInput.value = prompt;
+          handleAiSend();
+        }
+      });
+    });
+
+    if (aiChatForm) {
+      aiChatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleAiSend();
+      });
+    }
+
+    async function handleAiSend() {
+      const query = aiChatInput.value.trim();
+      if (!query) return;
+
+      const requestedCount = parseInt(aiCountSelect.value, 10) || 10;
+      aiChatInput.value = '';
+      aiChatInput.disabled = true;
+      aiSendBtn.disabled = true;
+
+      // Append user bubble
+      appendAiBubble('user', query);
+
+      // Append typing indicator bubble
+      const loadingBubble = appendAiBubble('assistant', `
+        <div class="ai-typing-indicator">
+          <div class="ai-dot"></div>
+          <div class="ai-dot"></div>
+          <div class="ai-dot"></div>
+          <span style="font-size:11px; font-weight:600; color:var(--text-secondary); margin-left:4px;">Scouting ${requestedCount} companies…</span>
+        </div>
+      `, true);
+
+      try {
+        const resp = await fetch('/api/ai/companies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: query,
+            count: requestedCount,
+            history: aiChatHistory
+          })
+        });
+
+        const data = await resp.json();
+        loadingBubble.remove();
+
+        if (!resp.ok) {
+          throw new Error(data.detail || 'Could not fetch companies.');
+        }
+
+        const reply = data.reply || 'Here are the companies discovered.';
+        const companies = data.companies || [];
+
+        // Save conversation history (limit to last 6 messages)
+        aiChatHistory.push({ role: 'user', content: query });
+        aiChatHistory.push({ role: 'assistant', content: reply });
+        if (aiChatHistory.length > 6) aiChatHistory = aiChatHistory.slice(-6);
+
+        // Build HTML for response
+        let replyHtml = `<div>${escapeHtml(reply)}</div>`;
+
+        if (companies.length > 0) {
+          // Feed directly into batch targets!
+          feedCompaniesIntoTargets(companies);
+
+          replyHtml += `
+            <div class="ai-feed-badge">
+              <span>✓</span> Loaded ${companies.length} URLs into Targets
+            </div>
+            <div class="ai-domain-tags">
+              ${companies.map(c => `<span class="ai-domain-tag">${escapeHtml(c)}</span>`).join('')}
+            </div>
+          `;
+        }
+
+        appendAiBubble('assistant', replyHtml, true);
+
+      } catch (err) {
+        loadingBubble.remove();
+        appendAiBubble('assistant', `<span style="color:#d93025; font-weight:600;">Error: ${escapeHtml(err.message || 'Failed to search companies')}</span>`, true);
+      } finally {
+        aiChatInput.disabled = false;
+        aiSendBtn.disabled = false;
+        aiChatInput.focus();
+      }
+    }
+
+    function appendAiBubble(role, content, isHtml = false) {
+      const bubble = document.createElement('div');
+      bubble.className = `ai-bubble ai-bubble-${role}`;
+      if (isHtml) {
+        bubble.innerHTML = content;
+      } else {
+        bubble.textContent = content;
+      }
+      aiChatBody.appendChild(bubble);
+      aiChatBody.scrollTop = aiChatBody.scrollHeight;
+      return bubble;
+    }
+
+    function feedCompaniesIntoTargets(companies) {
+      // 1. Switch active view to Batch so user sees targets
+      currentMode = 'batch';
+      tabBatchBtn.classList.add('active');
+      tabInstantBtn.classList.remove('active');
+      batchView.style.display = 'block';
+      instantView.style.display = 'none';
+
+      // 2. Insert into batchTargets (cleanly newline-separated, keeping it fully editable)
+      const existing = batchTargets.value.trim();
+      if (existing) {
+        batchTargets.value = existing + '\n' + companies.join('\n');
+      } else {
+        batchTargets.value = companies.join('\n');
+      }
+
+      // 3. Highlight and focus
+      batchTargets.focus();
+      showToast(`✓ Fed ${companies.length} company URLs into Targets`);
+    }
   </script>
 </body>
 </html>
