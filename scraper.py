@@ -237,42 +237,71 @@ def _clean_phone(raw: str) -> str | None:
     if not raw:
         return None
 
-    # 1. Reject date patterns like 2021-06-29 immediately
+    # 1. Reject currency, percent, and financial markers
+    if any(c in raw for c in ("%", "₹", "$", "€", "£", "¥", "Rs", "rs")):
+        return None
+
+    # 2. Reject negative numbers or space-minus (e.g. " -250.00", " -1.30")
+    if re.search(r"\s+[-–—]\s*\d", raw) or re.search(r"\(\s*[-–—]", raw):
+        return None
+
+    # 3. Reject decimal numbers / currency cents (e.g. ".00", ".21", ".78", ".50")
+    # Phone numbers never have 2-digit decimals.
+    if re.search(r"\.\d{1,2}(?:\D|$)", raw):
+        return None
+
+    # 4. Reject multiple dots unless standard 3-digit dot separated like 123.456.7890
+    if raw.count(".") >= 1:
+        parts = [p for p in raw.split(".") if p.strip()]
+        if any(len(re.sub(r"\D", "", p)) < 3 for p in parts):
+            return None
+
+    # 5. Reject date patterns like 2021-06-29 immediately
     for pat in DATE_PATTERNS:
         if pat.search(raw):
             return None
 
-    # 2. Reject strings with alphabetical characters (unless explicit phone extension)
+    # 6. Reject strings with alphabetical characters (unless explicit phone extension)
     if re.search(r"[a-zA-Z]", raw) and not re.search(r"(?i)\b(?:ext|x)\.?\s*\d+", raw):
         return None
 
+    # 7. Unmatched parentheses or invalid inside content
+    if raw.count("(") != raw.count(")"):
+        return None
+    if "(" in raw and ")" in raw:
+        inside = re.findall(r"\((.*?)\)", raw)
+        for ins in inside:
+            if not (2 <= len(re.sub(r"\D", "", ins)) <= 5):
+                return None
+
     digits = re.sub(r"\D", "", raw)
-    # 3. Phone number length validation:
+    # 8. Length validation:
     # If starting with '+', allow 8-15 digits (ITU-T E.164)
-    # If no '+', local numbers must have 10-14 digits (avoids 8-digit dates like 20210629, order IDs, or shortcodes)
+    # If no '+', local numbers must have 10-11 digits (avoids 12-14 digit timestamps or SKU/order IDs)
     if raw.startswith("+"):
         if not (8 <= len(digits) <= 15):
             return None
     else:
-        if not (10 <= len(digits) <= 14):
+        if not (10 <= len(digits) <= 11):
             return None
 
-    # 4. Reject repetitive or dummy digits like 0000000000, 1111111111
+    # 9. Reject repetitive or dummy digits like 0000000000, 1111111111
     if len(set(digits)) <= 3:
         return None
 
-    # 5. Reject sequential digits
+    # 10. Reject sequential digits
     if digits in ("1234567890", "0123456789", "9876543210", "01234567890", "0987654321"):
         return None
 
-    # 6. Reject schedule ranges, time patterns or multi-hyphen strings (e.g. "0-2 2-4 4-6", "10:00 - 18:00")
+    # 11. Reject schedule ranges, time patterns or multi-hyphen strings (e.g. "0-2 2-4 4-6", "10:00 - 18:00")
     if re.search(r"\d+-\d+\s+\d+-\d+", raw) or raw.count("-") >= 4 or ":" in raw:
         return None
 
-    # 7. Reject fragmented strings with too many short number fragments
-    segments = re.findall(r"\d+", raw)
-    if len(segments) >= 4 and all(len(s) <= 2 for s in segments):
-        return None
+    # 12. Indian local numbers without country code:
+    # Must start with 6, 7, 8, or 9 (mobile) or 0 (landline with STD code) or 1 (toll-free like 1800)
+    if len(digits) == 10 and not raw.startswith("+"):
+        if digits[0] not in ("6", "7", "8", "9", "0", "1"):
+            return None
 
     cleaned = re.sub(r"\s+", " ", raw).strip(" .-()")
     return cleaned
@@ -330,8 +359,19 @@ def _clean_link(href: str, base_url: str) -> str | None:
     parsed = urlparse(absolute)
     if parsed.scheme not in ("http", "https") or not parsed.hostname or not _same_site(absolute, base_url):
         return None
-    if parsed.path.lower().endswith(SKIP_EXTENSIONS) or any(word in parsed.path.lower() for word in SKIP_PATH_WORDS):
+    if parsed.path.lower().endswith(SKIP_EXTENSIONS):
         return None
+
+    path_lower = parsed.path.lower()
+    # Contact/support pages should never be blocked by generic words like 'account' or 'search'
+    is_contact_target = any(cw in path_lower for cw in ("contact", "support", "help", "customer-care", "customer_care", "reach-us", "about"))
+    if not is_contact_target:
+        if any(word in path_lower for word in SKIP_PATH_WORDS):
+            return None
+    else:
+        if any(w in path_lower for w in ("/login", "/signin", "/sign-in", "/wp-login", "/wp-admin")):
+            return None
+
     return absolute.rstrip("/") or f"{parsed.scheme}://{parsed.netloc}"
 
 

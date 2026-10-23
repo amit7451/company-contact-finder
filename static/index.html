@@ -1630,6 +1630,18 @@
         font-size: 28px;
       }
     }
+    .target-count-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: var(--radius-pill);
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      letter-spacing: -0.01em;
+    }
   </style>
 </head>
 <body>
@@ -1671,7 +1683,10 @@
           <div id="batchView" style="display: none;">
             <div class="form-group">
               <div class="targets-header-row">
-                <label class="form-label" for="batchTargets">Targets</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <label class="form-label" for="batchTargets" style="margin-bottom:0;">Targets</label>
+                  <span id="targetCountBadge" class="target-count-badge" style="display:none;">0 unique</span>
+                </div>
                 <button type="button" class="ai-inline-badge-btn" id="openAiScoutFromBatchBtn" title="Ask AI Scout to populate company targets">
                   <span>✨</span> Auto-fill with AI Scout
                 </button>
@@ -2936,6 +2951,34 @@
       return bubble;
     }
 
+    function normalizeTargetKey(str) {
+      return (str || '').trim().toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/.*$/, '');
+    }
+
+    function updateTargetsCounter() {
+      const raw = batchTargets.value.split('\n').map(l => l.trim()).filter(Boolean);
+      const seen = new Set();
+      for (const line of raw) {
+        const norm = normalizeTargetKey(line);
+        if (norm) seen.add(norm);
+      }
+      const badge = document.getElementById('targetCountBadge');
+      if (!badge) return;
+      if (seen.size > 0) {
+        badge.textContent = `${seen.size} unique target${seen.size === 1 ? '' : 's'}`;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    if (batchTargets) {
+      batchTargets.addEventListener('input', updateTargetsCounter);
+    }
+
     function feedCompaniesIntoTargets(companies) {
       // 1. Switch active view to Batch so user sees targets
       currentMode = 'batch';
@@ -2944,17 +2987,32 @@
       batchView.style.display = 'block';
       instantView.style.display = 'none';
 
-      // 2. Insert into batchTargets (cleanly newline-separated, keeping it fully editable)
-      const existing = batchTargets.value.trim();
-      if (existing) {
-        batchTargets.value = existing + '\n' + companies.join('\n');
-      } else {
-        batchTargets.value = companies.join('\n');
+      // 2. Parse existing lines in batchTargets and deduplicate
+      const lines = batchTargets.value.split('\n').map(l => l.trim()).filter(Boolean);
+      const seen = new Set();
+      const dedupedExisting = [];
+      for (const line of lines) {
+        const norm = normalizeTargetKey(line);
+        if (norm && !seen.has(norm)) {
+          seen.add(norm);
+          dedupedExisting.push(line);
+        }
       }
 
-      // 3. Highlight and focus
+      let addedCount = 0;
+      for (const comp of companies) {
+        const norm = normalizeTargetKey(comp);
+        if (norm && !seen.has(norm)) {
+          seen.add(norm);
+          dedupedExisting.push(comp.trim());
+          addedCount++;
+        }
+      }
+
+      batchTargets.value = dedupedExisting.join('\n');
+      updateTargetsCounter();
       batchTargets.focus();
-      showToast(`✓ Fed ${companies.length} company URLs into Targets`);
+      showToast(`✓ Loaded ${addedCount} unique targets (${dedupedExisting.length} total)`);
     }
   </script>
 </body>

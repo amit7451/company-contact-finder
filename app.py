@@ -871,6 +871,7 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
 
     is_conv = is_conversational_or_feedback(user_prompt)
 
+    candidate_buffer = max(count * 2, count + 12)
     system_prompt = (
         "You are an expert AI Company Scout specialized in finding authentic, operating businesses and their official active website root domains.\n"
         "GUIDELINES:\n"
@@ -883,7 +884,7 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
         "   - If the user is asking a question, expressing feedback, or clarifying intent (e.g. 'why small', 'should do as requested not automatically small or emerging', 'why did you pick these?', 'how do they work?'), acknowledge respectfully, answer concisely in 1-2 sentences, and set \"companies\": []. NEVER return company URLs when answering a question or feedback.\n"
         "3. DEDUPLICATION: Never repeat any company or domain that has already been mentioned in this conversation or listed in EXCLUDED DOMAINS. Every recommendation must be fresh and unique.\n"
         "4. REAL WEBSITES & SAFETY: Only provide legitimate, real-world businesses with active, genuine websites. NEVER guess, hallucinate, or fabricate personal names as domains (e.g. NEVER output names like anjalichopra.com, nikhilmor.com). Never output parked, expired, adult, escort, or spam domains.\n"
-        f"5. When company discovery is requested, discover up to {count + 4} verified candidates.\n"
+        f"5. When company discovery is requested, discover up to {candidate_buffer} candidate companies and their official active website root domains to guarantee enough choices.\n"
         "6. You MUST ALWAYS respond in valid JSON with this exact schema:\n"
         "{\n"
         '  "reply": "<Friendly, intelligent 1-2 sentence response explaining what was found or answering the question>",\n'
@@ -966,15 +967,23 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
                             results = await asyncio.gather(*tasks, return_exceptions=True)
 
                         for d, is_valid in zip(cleaned_candidates, results):
-                            if is_valid is True:
+                            if is_valid is True and d not in exclude_set and d not in verified_companies:
                                 verified_companies.append(d)
                                 if len(verified_companies) >= count:
                                     break
                     except Exception as verify_err:
                         logger.warning("Domain verification pass encountered error: %s", verify_err)
 
-                # Fallback to cleaned candidates if verification yielded fewer than needed but candidates are clean
-                final_companies = verified_companies if verified_companies else cleaned_candidates[:count]
+                # Guarantee True Count:
+                # If verified_companies has fewer than `count` (e.g. due to slow timeouts), fill remaining
+                # spots from clean candidates that passed domain safety and are not in exclude_set.
+                final_companies: list[str] = list(verified_companies)
+                if not is_conv and len(final_companies) < count and cleaned_candidates:
+                    for c in cleaned_candidates:
+                        if c not in final_companies and c not in exclude_set:
+                            final_companies.append(c)
+                            if len(final_companies) >= count:
+                                break
 
                 return {
                     "reply": parsed.get("reply", "Here are the companies found:"),
