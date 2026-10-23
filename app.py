@@ -794,6 +794,38 @@ async def _verify_domain_safety_and_liveness(client: httpx.AsyncClient, domain: 
     return False
 
 
+def is_conversational_or_feedback(text: str) -> bool:
+    """Detect if user input is an inquiry, question, or feedback rather than a new company search request."""
+    t = text.strip().lower()
+
+    # Explicit search / list requests should NOT be treated as questions
+    search_imperatives = [
+        "give me", "list", "show me", "search", "find", "get me",
+        "smaller than", "more but", "i said", "only small", "give more", "recommend"
+    ]
+    if any(si in t for si in search_imperatives):
+        return False
+
+    if t.endswith("?"):
+        return True
+
+    q_starters = (
+        "why ", "what ", "how ", "who ", "when ", "where ", "which ",
+        "explain ", "tell me ", "can you explain ", "do you mean "
+    )
+    if t.startswith(q_starters) or t in ["why", "why small", "why repeated", "why these", "why those"]:
+        return True
+
+    feedback_terms = [
+        "should do as requested", "not automatically", "don't assume", "dont assume",
+        "i didn't ask for", "i didnt ask for", "stop repeating", "as requested"
+    ]
+    if any(ft in t for ft in feedback_terms):
+        return True
+
+    return False
+
+
 @app.post("/api/ai/companies")
 async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
     """
@@ -837,13 +869,20 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
             detail="OPENROUTER_API_KEY is not configured in environment or .env file.",
         )
 
+    is_conv = is_conversational_or_feedback(user_prompt)
+
     system_prompt = (
         "You are an expert AI Company Scout specialized in finding authentic, operating businesses and their official active website root domains.\n"
-        "CRITICAL GUIDELINES:\n"
-        "1. COMPANY SIZE STRICT COMPLIANCE: If the user asks for 'small', 'early-stage', 'seed', 'series A', 'indie', 'bootstrapped', or 'boutique', you MUST NEVER return massive market leaders or multi-billion dollar unicorns (for fintech: NEVER return Zerodha, Razorpay, Paytm, PhonePe, Cred, Khatabook, Groww, Pine Labs, BharatPe; for fashion: NEVER return Zara, H&M, Biba, Fabindia, Nykaa, Reliance Trends, ASOS, Chumbak). Focus strictly on genuinely small, emerging, niche, or boutique players (e.g. Setu, Rupifi, Decentro, FinBox, Jar, Tortoise, Doodlage, Buna, Jodi Life, Suta, Okhai).\n"
-        "2. STRICT DEDUPLICATION: NEVER repeat any company or domain that has already been mentioned in this conversation or listed in EXCLUDED DOMAINS. Every recommendation must be fresh and unique.\n"
-        "3. REAL WEBSITES & SAFETY: Only provide legitimate, real-world businesses with active, genuine websites. NEVER guess, hallucinate, or fabricate personal names as domains (e.g. NEVER output names like anjalichopra.com, nikhilmor.com). Never output parked, expired, adult, escort, or spam domains.\n"
-        "4. CONVERSATIONAL INTELLIGENCE: If the user asks a follow-up or clarifying question (e.g. 'why did you pick these?', 'are they bootstrapped?', 'why is it repeated?', 'why have razorpay raised funds?', 'what do they do?'), provide a concise, smart, helpful 1-2 sentence conversational answer, and set \"companies\": []. Only return domains in \"companies\" when the user is requesting a list of companies.\n"
+        "GUIDELINES:\n"
+        "1. STRICT USER INTENT & SCOPE (DO NOT ASSUME SIZE):\n"
+        "   - Strictly follow the user's explicit request. Do NOT automatically assume or force companies to be 'small' or 'emerging'.\n"
+        "   - If the user asks generally (e.g. 'Fintech payment platforms', 'CRM software', 'Fashion brands', 'Cloud storage'), return the most relevant, well-known, and established leaders in that field (e.g. Stripe, PayPal, Razorpay, Adyen, Square).\n"
+        "   - ONLY if the user explicitly specifies 'small', 'early-stage', 'seed', 'bootstrapped', 'indie', or 'boutique', filter for small/emerging players and exclude multi-billion dollar market leaders.\n"
+        "   - ONLY if the user asks for 'large', 'top', or 'fortune 500', focus on industry giants.\n"
+        "2. CONVERSATIONAL QUESTIONS & USER FEEDBACK:\n"
+        "   - If the user is asking a question, expressing feedback, or clarifying intent (e.g. 'why small', 'should do as requested not automatically small or emerging', 'why did you pick these?', 'how do they work?'), acknowledge respectfully, answer concisely in 1-2 sentences, and set \"companies\": []. NEVER return company URLs when answering a question or feedback.\n"
+        "3. DEDUPLICATION: Never repeat any company or domain that has already been mentioned in this conversation or listed in EXCLUDED DOMAINS. Every recommendation must be fresh and unique.\n"
+        "4. REAL WEBSITES & SAFETY: Only provide legitimate, real-world businesses with active, genuine websites. NEVER guess, hallucinate, or fabricate personal names as domains (e.g. NEVER output names like anjalichopra.com, nikhilmor.com). Never output parked, expired, adult, escort, or spam domains.\n"
         f"5. When company discovery is requested, discover up to {count + 4} verified candidates.\n"
         "6. You MUST ALWAYS respond in valid JSON with this exact schema:\n"
         "{\n"
@@ -863,9 +902,12 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
             if role in ["user", "assistant"] and content:
                 messages.append({"role": role, "content": str(content)[:400]})
 
-    user_content = f"{user_prompt} (Target Count: {count} companies)"
-    if exclude_set:
-        user_content += f"\n(EXCLUDED DOMAINS - strictly do not repeat any of these: {', '.join(sorted(exclude_set)[:50])})"
+    if is_conv:
+        user_content = f"{user_prompt}\n[Instruction: This is a user question or feedback. Answer concisely, politely, and helpfully. Do NOT search for companies (companies must be []).]"
+    else:
+        user_content = f"{user_prompt} (Target Count: {count} companies)"
+        if exclude_set:
+            user_content += f"\n(EXCLUDED DOMAINS - strictly do not repeat any of these: {', '.join(sorted(exclude_set)[:50])})"
 
     messages.append({"role": "user", "content": user_content})
 
@@ -900,17 +942,18 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
                 data = resp.json()
                 content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
                 parsed = json.loads(content)
-                raw_companies = parsed.get("companies", [])
+                raw_companies = parsed.get("companies", []) if not is_conv else []
                 cleaned_candidates: list[str] = []
                 seen: set[str] = set()
 
-                for c in raw_companies:
-                    dom = sanitize_ai_domain(c)
-                    if dom and "." in dom and dom not in seen and dom not in exclude_set:
-                        # Exclude any domains with explicit suspicious words immediately
-                        if not any(w in dom for w in SUSPICIOUS_DOMAIN_WORDS):
-                            seen.add(dom)
-                            cleaned_candidates.append(dom)
+                if not is_conv and isinstance(raw_companies, list):
+                    for c in raw_companies:
+                        dom = sanitize_ai_domain(c)
+                        if dom and "." in dom and dom not in seen and dom not in exclude_set:
+                            # Exclude any domains with explicit suspicious words immediately
+                            if not any(w in dom for w in SUSPICIOUS_DOMAIN_WORDS):
+                                seen.add(dom)
+                                cleaned_candidates.append(dom)
 
                 # Concurrently verify domain liveness and safety
                 verified_companies: list[str] = []
@@ -935,8 +978,8 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
 
                 return {
                     "reply": parsed.get("reply", "Here are the companies found:"),
-                    "companies": final_companies[:count],
-                    "count": len(final_companies[:count]),
+                    "companies": final_companies[:count] if not is_conv else [],
+                    "count": len(final_companies[:count]) if not is_conv else 0,
                 }
             else:
                 last_error = f"OpenRouter {model} returned {resp.status_code}: {resp.text[:120]}"
