@@ -2805,6 +2805,7 @@
     const aiChips = document.querySelectorAll('.ai-chip');
 
     let aiChatHistory = [];
+    let aiSessionDomains = new Set();
 
     function toggleAiChat(open) {
       if (open === undefined) {
@@ -2861,7 +2862,7 @@
           <div class="ai-dot"></div>
           <div class="ai-dot"></div>
           <div class="ai-dot"></div>
-          <span style="font-size:11px; font-weight:600; color:var(--text-secondary); margin-left:4px;">Scouting ${requestedCount} companies…</span>
+          <span style="font-size:11px; font-weight:600; color:var(--text-secondary); margin-left:4px;">Researching verified companies…</span>
         </div>
       `, true);
 
@@ -2872,7 +2873,8 @@
           body: JSON.stringify({
             prompt: query,
             count: requestedCount,
-            history: aiChatHistory
+            history: aiChatHistory,
+            exclude_domains: Array.from(aiSessionDomains)
           })
         });
 
@@ -2895,6 +2897,7 @@
         let replyHtml = `<div>${escapeHtml(reply)}</div>`;
 
         if (companies.length > 0) {
+          companies.forEach(c => aiSessionDomains.add(c));
           // Feed directly into batch targets!
           feedCompaniesIntoTargets(companies);
 

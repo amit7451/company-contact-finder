@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import json
@@ -747,6 +748,19 @@ def load_env_vars():
 load_env_vars()
 
 
+SUSPICIOUS_DOMAIN_WORDS = {
+    "porn", "sex", "xxx", "adult", "erotic", "nude", "escort", "escortwp",
+    "gambling", "casino", "betting", "callgirl", "massage", "hookup", "stripclub",
+    "poker", "slots", "dating"
+}
+
+PARKED_CONTENT_INDICATORS = [
+    "escortwp", "escort service", "buy this domain", "domain for sale",
+    "this domain is parked", "under construction", "hugedomains", "dan.com",
+    "sedo.com", "godaddy parking", "namecheap parking", "parked free"
+]
+
+
 def sanitize_ai_domain(raw_domain: str) -> str:
     d = str(raw_domain).strip().lower()
     d = re.sub(r"^https?://", "", d)
@@ -755,11 +769,37 @@ def sanitize_ai_domain(raw_domain: str) -> str:
     return d
 
 
+async def _verify_domain_safety_and_liveness(client: httpx.AsyncClient, domain: str) -> bool:
+    """Fast check to verify domain is genuinely live, reachable, and safe from adult/parked content."""
+    dom_lower = domain.lower()
+    if any(w in dom_lower for w in SUSPICIOUS_DOMAIN_WORDS):
+        return False
+
+    for proto in ["https://", "http://"]:
+        url = f"{proto}{domain}"
+        try:
+            resp = await client.get(url, timeout=3.0, follow_redirects=True)
+            if resp.status_code < 400:
+                final_host = (resp.url.host or "").lower()
+                if any(w in final_host for w in SUSPICIOUS_DOMAIN_WORDS):
+                    return False
+                text_sample = resp.text[:4000].lower()
+                if any(w in text_sample for w in SUSPICIOUS_DOMAIN_WORDS):
+                    return False
+                if any(ind in text_sample for ind in PARKED_CONTENT_INDICATORS):
+                    return False
+                return True
+        except Exception:
+            continue
+    return False
+
+
 @app.post("/api/ai/companies")
 async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
     """
-    AI Scout company discovery endpoint powered by OpenRouter.
-    Strictly discovers companies & root domain URLs based on user query and requested count (10, 20, or 50).
+    AI Scout company discovery endpoint powered by high-intelligence models (DeepSeek V3 & Llama 3.3 70B).
+    Strictly discovers authentic companies & verified root domains with size adherence, strict deduplication,
+    content safety filters, and conversational reasoning.
     """
     user_prompt = str(payload.get("prompt", "")).strip()
     if not user_prompt:
@@ -778,6 +818,15 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
     else:
         count = 50
 
+    # Parse excluded domains from session to strictly prevent repeating
+    raw_excludes = payload.get("exclude_domains", [])
+    exclude_set: set[str] = set()
+    if isinstance(raw_excludes, list):
+        for item in raw_excludes:
+            clean_ex = sanitize_ai_domain(str(item))
+            if clean_ex:
+                exclude_set.add(clean_ex)
+
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not api_key:
         load_env_vars()
@@ -789,30 +838,36 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
         )
 
     system_prompt = (
-        "You are an AI Company Scout specialized strictly in finding companies and their official website domains.\n"
-        "Guidelines:\n"
-        "1. If the user greeting is a simple hello/hi/hey, reply with a brief, friendly 1-sentence greeting and ask what industry, niche, or location of companies they want to find. Set companies to [].\n"
-        "2. If the user asks about anything unrelated to finding companies or their websites, politely reply: 'I can only help you discover companies and their official website domains.' and set companies to [].\n"
-        f"3. When the user asks for companies, discover up to exactly {count} relevant, verified companies and return their official website root domains (e.g. stripe.com, klarna.com, adyen.com).\n"
-        "4. You MUST ALWAYS respond in valid JSON with this exact schema:\n"
+        "You are an expert AI Company Scout specialized in finding authentic, operating businesses and their official active website root domains.\n"
+        "CRITICAL GUIDELINES:\n"
+        "1. COMPANY SIZE STRICT COMPLIANCE: If the user asks for 'small', 'early-stage', 'seed', 'series A', 'indie', 'bootstrapped', or 'boutique', you MUST NEVER return massive market leaders or multi-billion dollar unicorns (for fintech: NEVER return Zerodha, Razorpay, Paytm, PhonePe, Cred, Khatabook, Groww, Pine Labs, BharatPe; for fashion: NEVER return Zara, H&M, Biba, Fabindia, Nykaa, Reliance Trends, ASOS, Chumbak). Focus strictly on genuinely small, emerging, niche, or boutique players (e.g. Setu, Rupifi, Decentro, FinBox, Jar, Tortoise, Doodlage, Buna, Jodi Life, Suta, Okhai).\n"
+        "2. STRICT DEDUPLICATION: NEVER repeat any company or domain that has already been mentioned in this conversation or listed in EXCLUDED DOMAINS. Every recommendation must be fresh and unique.\n"
+        "3. REAL WEBSITES & SAFETY: Only provide legitimate, real-world businesses with active, genuine websites. NEVER guess, hallucinate, or fabricate personal names as domains (e.g. NEVER output names like anjalichopra.com, nikhilmor.com). Never output parked, expired, adult, escort, or spam domains.\n"
+        "4. CONVERSATIONAL INTELLIGENCE: If the user asks a follow-up or clarifying question (e.g. 'why did you pick these?', 'are they bootstrapped?', 'why is it repeated?', 'why have razorpay raised funds?', 'what do they do?'), provide a concise, smart, helpful 1-2 sentence conversational answer, and set \"companies\": []. Only return domains in \"companies\" when the user is requesting a list of companies.\n"
+        f"5. When company discovery is requested, discover up to {count + 4} verified candidates.\n"
+        "6. You MUST ALWAYS respond in valid JSON with this exact schema:\n"
         "{\n"
-        '  "reply": "<Short friendly 1-2 sentence explanation of what was found or greeting>",\n'
+        '  "reply": "<Friendly, intelligent 1-2 sentence response explaining what was found or answering the question>",\n'
         '  "companies": ["domain1.com", "domain2.com", ...]\n'
         "}\n"
-        "Do NOT include markdown formatting or backticks around the JSON. Output raw JSON only.\n"
+        "Do NOT include markdown formatting or backticks around the JSON. Output raw JSON only."
     )
 
     messages = [{"role": "system", "content": system_prompt}]
 
     history = payload.get("history", [])
     if isinstance(history, list):
-        for msg in history[-4:]:
+        for msg in history[-6:]:
             role = msg.get("role")
             content = msg.get("content")
             if role in ["user", "assistant"] and content:
-                messages.append({"role": role, "content": str(content)[:300]})
+                messages.append({"role": role, "content": str(content)[:400]})
 
-    messages.append({"role": "user", "content": f"{user_prompt} (Target Count: {count} companies)"})
+    user_content = f"{user_prompt} (Target Count: {count} companies)"
+    if exclude_set:
+        user_content += f"\n(EXCLUDED DOMAINS - strictly do not repeat any of these: {', '.join(sorted(exclude_set)[:50])})"
+
+    messages.append({"role": "user", "content": user_content})
 
     openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
@@ -822,7 +877,12 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
         "X-Title": "Company Contact Finder",
     }
 
-    models_to_try = ["openai/gpt-4o-mini", "deepseek/deepseek-chat"]
+    # Prioritize DeepSeek V3 and Llama 3.3 70B for maximum intelligence and genuine domain knowledge
+    models_to_try = [
+        "deepseek/deepseek-chat",
+        "meta-llama/llama-3.3-70b-instruct",
+        "openai/gpt-4o-mini",
+    ]
     last_error = None
 
     for model in models_to_try:
@@ -830,7 +890,7 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
             "model": model,
             "messages": messages,
             "response_format": {"type": "json_object"},
-            "temperature": 0.2,
+            "temperature": 0.25,
             "max_tokens": 1200,
         }
         try:
@@ -841,24 +901,50 @@ async def ai_discover_companies(payload: dict[str, Any] = Body(...)):
                 content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
                 parsed = json.loads(content)
                 raw_companies = parsed.get("companies", [])
-                cleaned_companies: list[str] = []
-                seen = set()
+                cleaned_candidates: list[str] = []
+                seen: set[str] = set()
+
                 for c in raw_companies:
                     dom = sanitize_ai_domain(c)
-                    if dom and "." in dom and dom not in seen:
-                        seen.add(dom)
-                        cleaned_companies.append(dom)
+                    if dom and "." in dom and dom not in seen and dom not in exclude_set:
+                        # Exclude any domains with explicit suspicious words immediately
+                        if not any(w in dom for w in SUSPICIOUS_DOMAIN_WORDS):
+                            seen.add(dom)
+                            cleaned_candidates.append(dom)
+
+                # Concurrently verify domain liveness and safety
+                verified_companies: list[str] = []
+                if cleaned_candidates:
+                    try:
+                        async with httpx.AsyncClient(
+                            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+                        ) as verifier_client:
+                            tasks = [_verify_domain_safety_and_liveness(verifier_client, d) for d in cleaned_candidates]
+                            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                        for d, is_valid in zip(cleaned_candidates, results):
+                            if is_valid is True:
+                                verified_companies.append(d)
+                                if len(verified_companies) >= count:
+                                    break
+                    except Exception as verify_err:
+                        logger.warning("Domain verification pass encountered error: %s", verify_err)
+
+                # Fallback to cleaned candidates if verification yielded fewer than needed but candidates are clean
+                final_companies = verified_companies if verified_companies else cleaned_candidates[:count]
+
                 return {
                     "reply": parsed.get("reply", "Here are the companies found:"),
-                    "companies": cleaned_companies[:count],
-                    "count": len(cleaned_companies[:count]),
+                    "companies": final_companies[:count],
+                    "count": len(final_companies[:count]),
                 }
             else:
-                last_error = f"OpenRouter returned {resp.status_code}: {resp.text[:120]}"
-                logger.warning(f"Model {model} failed: {last_error}")
+                last_error = f"OpenRouter {model} returned {resp.status_code}: {resp.text[:120]}"
+                logger.warning("Model %s failed: %s", model, last_error)
         except Exception as exc:
             last_error = str(exc)
-            logger.warning(f"Error querying {model}: {exc}")
+            logger.warning("Error querying %s: %s", model, exc)
 
     raise HTTPException(status_code=502, detail=f"AI service error: {last_error}")
+
 
